@@ -124,10 +124,11 @@ for file in files:
 		colData["column_name"] = column
 		colData["number_non_empty_cells"] = nonEmptyCount[column]
 		colData["number_empty_cells"] = emptyCount[column]
-		grouped = df.groupBy(column).count()
+		#grouped = df.groupBy(column).count()
+		grouped = df.groupBy(column).agg(F.count(column).alias("ColCount"))
 		distinctCount = grouped.count()
 		colData["number_distinct_values"] = distinctCount
-		tempFreq = grouped.sort(F.desc('count')).select(column).take(5)
+		tempFreq = grouped.sort(F.desc('ColCount')).select(column).take(5)
 		freqList = []
 		for item in tempFreq:
 			freqList.append(item[0])
@@ -211,7 +212,7 @@ for file in files:
 	df.unpersist()
 	rdd.unpersist()
 
-freqDf = spark.createDataFrame(freqColItems,["id","dtypes"]
+freqDf = spark.createDataFrame(freqColItems,["id","dtypes"])
 fpGrowth = FPGrowth(itemsCol="dtypes", minSupport=0.5, minConfidence=0.6)
 model = fpGrowth.fit(df)
 freqSet = model.freqItemsets.collect()
@@ -221,4 +222,3 @@ with open('freqDataTypes.csv','w') as f:
 	for item in freqSet:
 		if len(item[0]) > 1:
 			wr.writerow(item[0])
-
