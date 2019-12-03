@@ -104,6 +104,7 @@ for file in files:
 	rdd = df.rdd.cache()
 	# 1 & 2
 	emptyDf = df.select([count(when(isnan(c) | col(c).contains('NA') | col(c).contains('NULL') | col(c).isNull(),c)).alias(c) for c in df.columns])
+	
 	emptyCount = emptyDf.rdd.map(lambda row : row.asDict()).collect()[0]
 	rows = rdd.countApprox(timeout=10000)
 	nonEmptyCount = {}
@@ -117,24 +118,24 @@ for file in files:
 	colStats = {}
 	colListData = []
 	
-	for col in df.columns:
+	for column in df.columns:
 		#print(col)
 		colData = {}
-		colData["column_name"] = col
-		colData["number_non_empty_cells"] = nonEmptyCount[col]
-		colData["number_empty_cells"] = emptyCount[col]
-		grouped = df.groupBy(col).count()
+		colData["column_name"] = column
+		colData["number_non_empty_cells"] = nonEmptyCount[column]
+		colData["number_empty_cells"] = emptyCount[column]
+		grouped = df.groupBy(column).count()
 		distinctCount = grouped.count()
 		colData["number_distinct_values"] = distinctCount
-		tempFreq = grouped.sort(F.desc('count')).select(col).take(5)
+		tempFreq = grouped.sort(F.desc('count')).select(column).take(5)
 		freqList = []
 		for item in tempFreq:
 			freqList.append(item[0])
 		colData["frequent_values"] = freqList
-		mostFrequent[col] = freqList
-		distinct[col] = distinctCount
-		if dataTypes[col] == "string":
-			colRdd = df.select(col).dropna().rdd.map(lambda x: x[0])
+		mostFrequent[column] = freqList
+		distinct[column] = distinctCount
+		if dataTypes[column] == "string":
+			colRdd = df.select(column).dropna().rdd.map(lambda x: x[0])
 			colRdd = colRdd.map(lambda x: (x,castAsType(x)))
 			freqColItems.append((freqId,colRdd.map(lambda x:x[1]).distinct().collect()))
 			freqId += 1
@@ -142,21 +143,21 @@ for file in files:
 			realStats = getRealStats(colRdd)
 			dateStats = getDateStats(colRdd)
 			textStats = getTextStats(colRdd)
-			colStats[col] = [intStats,realStats,dateStats,textStats]
-		elif dataTypes[col] in ["int","long","bigint"]:
-			colRdd = df.select(col).dropna().rdd.map(lambda x: x[0])
-			intStats = (nonEmptyCount[col], colRdd.max(), colRdd.min(), colRdd.mean(), colRdd.stdev())
+			colStats[column] = [intStats,realStats,dateStats,textStats]
+		elif dataTypes[column] in ["int","long","bigint"]:
+			colRdd = df.select(column).dropna().rdd.map(lambda x: x[0])
+			intStats = (nonEmptyCount[column], colRdd.max(), colRdd.min(), colRdd.mean(), colRdd.stdev())
 			realStats = (0,0,0,0,0)
 			dateStats = (0,0,0)
 			textStats = (0,0,0,0)
-			colStats[col] = [intStats,realStats,dateStats,textStats]
-		elif dataTypes[col] in ["double","float"]:
-			colRdd = df.select(col).dropna().rdd.map(lambda x: x[0])
+			colStats[column] = [intStats,realStats,dateStats,textStats]
+		elif dataTypes[column] in ["double","float"]:
+			colRdd = df.select(column).dropna().rdd.map(lambda x: x[0])
 			intStats = (0,0,0,0,0)
-			realStats = (nonEmptyCount[col], colRdd.max(), colRdd.min(), colRdd.mean(), colRdd.stdev())
+			realStats = (nonEmptyCount[column], colRdd.max(), colRdd.min(), colRdd.mean(), colRdd.stdev())
 			dateStats = (0,0,0)
 			textStats = (0,0,0,0)
-			colStats[col] = [intStats,realStats,dateStats,textStats]
+			colStats[column] = [intStats,realStats,dateStats,textStats]
 		colRdd.unpersist()
 		
 		dataTypesValue = {}
@@ -199,7 +200,7 @@ for file in files:
 				tempData["average_length"] = keyData[3][3]
 				tempArray.append(tempData)
 			dataTypesValue[key] = tempArray
-		colData["dataTypes"] = dataTypesValue[col]
+		colData["dataTypes"] = dataTypesValue[column]
 		colListData.append(colData)
 	
 	data["columns"] = colListData
