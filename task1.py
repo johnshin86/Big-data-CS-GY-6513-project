@@ -87,9 +87,9 @@ def getTextStats(rdd):
 	return count, longest, shortest, avgLen
 
 def datetime_handler(x):
-    if isinstance(x, datetime.datetime):
-        return x.isoformat()
-    raise TypeError("Unknown type")
+	if isinstance(x, datetime.datetime):
+		return x.isoformat()
+	raise TypeError("Unknown type")
 
 files = getFileList()
 
@@ -205,7 +205,7 @@ for file in files:
 	data["columns"] = colListData
 
 	with open(file.split("/")[1] +'.json', 'w') as fp:
-    	json.dump(data, fp,default=datetime_handler)
+		json.dump(data, fp,default=datetime_handler)
 
 	df.unpersist()
 	rdd.unpersist()
@@ -216,8 +216,8 @@ model = fpGrowth.fit(df)
 freqSet = model.freqItemsets.collect()
 
 with open('freqDataTypes.csv','w') as f:
-    wr = csv.writer(f)
-    for item in freqSet:
-    	if len(item[0]) > 1:
-    		wr.writerow(item[0])
+	wr = csv.writer(f)
+	for item in freqSet:
+		if len(item[0]) > 1:
+			wr.writerow(item[0])
 
