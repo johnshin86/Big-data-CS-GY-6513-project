@@ -1,4 +1,5 @@
 import os
+import gc
 import csv
 import json
 import pyspark
@@ -206,11 +207,12 @@ for file in files:
 	
 	data["columns"] = colListData
 
-	with open(file.split("/")[1] +'.json', 'w') as fp:
+	with open(file.split("/")[-1] +'.json', 'w') as fp:
 		json.dump(data, fp,default=datetime_handler)
 
 	df.unpersist()
 	rdd.unpersist()
+	gc.collect()
 
 freqDf = spark.createDataFrame(freqColItems,["id","dtypes"])
 fpGrowth = FPGrowth(itemsCol="dtypes", minSupport=0.5, minConfidence=0.6)
