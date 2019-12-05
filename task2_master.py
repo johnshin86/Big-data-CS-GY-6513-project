@@ -40,7 +40,32 @@ files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 
 def semanticType(df):
     types = {}
-    #
+    """
+    The semantic types:
+    1) Person name (Last name, First name, Middle name, Full name)
+    2) Business name
+    3) Phone Number
+    4) Address
+    5) Street name
+    6) City
+    7) Neighborhood
+    8) LAT/LON coordinates
+    9) Zip code
+    10) Borough
+    11) School name (Abbreviations and full names)
+    12) Color
+    13) Car make
+    14) City agency (Abbreviations and full names)
+    15) Areas of study (e.g., Architecture, Animal Science, Communications)
+    16) Subjects in school (e.g., MATH A, MATH B, US HISTORY)
+    17) School Levels (K-2, ELEMENTARY, ELEMENTARY SCHOOL, MIDDLE)
+    18) College/University names
+    19) Websites (e.g., ASESCHOLARS.ORG)
+    20) Building Classification (e.g., R0-CONDOMINIUM, R2-WALK-UP)
+    21) Vehicle Type (e.g., AMBULANCE, VAN, TAXI, BUS)
+    22) Type of location (e.g., ABANDONED BUILDING, AIRPORT TERMINAL, BANK, CHURCH, CLOTHING/BOUTIQUE)
+    23) Parks/Playgrounds (e.g., CLOVE LAKES PARK, GREENE PLAYGROUND)
+    """
 
     return types
 
