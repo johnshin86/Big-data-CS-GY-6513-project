@@ -19,6 +19,8 @@ from pyspark.sql.functions import lit
 from pyspark.sql import SQLContext
 sqlContext=SQLContext(spark.sparkContext, sparkSession=spark, jsqlContext=None)
 
+import re
+
 spark = SparkSession \
 		.builder \
 		.appName("Big data project") \
@@ -42,7 +44,7 @@ def semanticType(df):
     types = {}
     """
     The semantic types:
-    1) Person name (Last name, First name, Middle name, Full name)
+    1) Person name
     2) Business name
     3) Phone Number
     4) Address
@@ -65,7 +67,11 @@ def semanticType(df):
     21) Vehicle Type (e.g., AMBULANCE, VAN, TAXI, BUS)
     22) Type of location (e.g., ABANDONED BUILDING, AIRPORT TERMINAL, BANK, CHURCH, CLOTHING/BOUTIQUE)
     23) Parks/Playgrounds (e.g., CLOVE LAKES PARK, GREENE PLAYGROUND)
+
+    Dataframe will be 2 columns. First column is the data and 2nd is the count.
     """
+
+
 
     return types
 
