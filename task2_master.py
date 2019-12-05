@@ -72,6 +72,16 @@ def semanticType(colName, df):
     We will check the column name and it's levenshtein distance with the list of semantic types. We will call the    function for that semantic type.
     """
 
+    def REGEX(df):
+        return
+
+    def NAME(df):
+        return
+
+    def LEVEN(df):
+        return
+
+
 
 
     return types
