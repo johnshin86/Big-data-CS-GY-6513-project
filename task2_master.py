@@ -12,6 +12,26 @@ from pyspark.sql.functions import udf
 
 from pyspark.sql.functions import isnan, when, count, col
 
+from pyspark.ml.linalg import Vectors
+from pyspark.sql.functions import col
+from pyspark.sql.functions import lit
+
+from pyspark.sql import SQLContext
+sqlContext=SQLContext(spark.sparkContext, sparkSession=spark, jsqlContext=None)
+
+spark = SparkSession \
+		.builder \
+		.appName("Big data project") \
+		.config("spark.some.config.option", "some-value") \
+		.getOrCreate()
+
+def getData(file):
+    return spark.read.option("delimiter", "\\t").option("inferSchema", "true").option("header","true").csv(file, inferSchema=True)
+
+
+def getDataCustom(file):
+    return spark.read.option("delimiter", ",").option("inferSchema", "true").option("header","true").csv(file, inferSchema=True)
+
 
 with open("/home/jys308/cluster1.txt","r") as f:
 	content = f.readlines()
@@ -20,7 +40,7 @@ files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 
 def semanticType(df):
     types = {}
-    # 
+    #
 
     return types
 
@@ -36,5 +56,5 @@ for file in files:
 	fileName = fileData[0]
 	colName = fileData[1]
 	df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-	
+
 
