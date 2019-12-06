@@ -45,6 +45,10 @@ with open("/home/jys308/cluster1.txt","r") as f:
 
 files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 
+########################################
+# Main semantic type function
+########################################
+
 def semanticType(colName, df):
     types = {}
     """
@@ -73,8 +77,10 @@ def semanticType(colName, df):
     22) Type of location (e.g., ABANDONED BUILDING, AIRPORT TERMINAL, BANK, CHURCH, CLOTHING/BOUTIQUE) LEVEN
     23) Parks/Playgrounds (e.g., CLOVE LAKES PARK, GREENE PLAYGROUND) LEVEN
 
-    Dataframe will be 2 columns. First column is the data and 2nd is the count.
     We will check the column name and it's levenshtein distance with the list of semantic types. We will call the    function for that semantic type.
+
+    input: df with 2 columns. 1st column is the data and 2nd is the count
+    output: dictionary with keys as semantic types and values as count
     """
 
     def REGEX(df):
@@ -93,12 +99,9 @@ def semanticType(colName, df):
 
     return types
 
-Column_Names = []
-
-for file in files:
-    fileData = file.split(".")
-    colName = fileData[1]
-    Column_Names.append(colName)
+#################################
+# Train Classifier
+#################################
 
 address_df = getDataCustom('/user/jys308/Address_Point.csv')
 permit_df = getDataCustom('/user/jys308/Approved_Permits.csv')
@@ -123,13 +126,17 @@ train3 = train1.union(train2)
 trainingData =  train3.union(full_st_name)
 trainingData = trainingData.dropna()
 
-indexer   = StringIndexer(inputCol="category", outputCol="label")
+indexer = StringIndexer(inputCol="category", outputCol="label")
 tokenizer = RegexTokenizer(pattern=u'\W+', inputCol="TEXT", outputCol="words", toLowercase=False)
 hashingTF = HashingTF(inputCol="words", outputCol="rawFeatures")
-idf       = IDF(inputCol="rawFeatures", outputCol="features")
-lr        = LogisticRegression(maxIter=20, regParam=0.001)
+idf = IDF(inputCol="rawFeatures", outputCol="features")
+lr = LogisticRegression(maxIter=20, regParam=0.001)
 pipeline = Pipeline(stages=[indexer, tokenizer, hashingTF, idf, lr])
 model = pipeline.fit(trainingData)
+
+#######################################
+# Iterate through all columns
+#######################################
 
 for file in files:
 	fileData = file.split(".")
