@@ -25,6 +25,8 @@ from pyspark.ml.feature import HashingTF, IDF, RegexTokenizer, StringIndexer, Wo
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml import Pipeline
 from pyspark.mllib.evaluation import MulticlassMetrics
+from fuzzywuzzy import fuzz
+import string
 
 spark = SparkSession \
 		.builder \
@@ -94,8 +96,19 @@ def semanticType(colName, df):
     def LEVEN(df):
         return
 
+    types_names = {}
 
+    #check levenshtein distance with NAME
+    if fuzz.partial_ratio(colName.lower(), 'name') > 0.5:
+        types_names = NAME(df)
 
+    types_regex = REGEX(df)
+
+    types_leven = LEVEN(df)
+
+    #merge all three dictionaries
+
+    types = {**types_names, **types_regex, **types_leven}
 
     return types
 
@@ -143,7 +156,6 @@ for file in files:
 	fileName = fileData[0]
 	colName = fileData[1]
 	df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-        out = semanticTypes(colName, df)
+        types = semanticTypes(colName, df)
         #process dictionary to record to json
-
 
