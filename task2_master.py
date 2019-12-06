@@ -21,6 +21,11 @@ sqlContext=SQLContext(spark.sparkContext, sparkSession=spark, jsqlContext=None)
 
 import re
 
+from pyspark.ml.feature import HashingTF, IDF, RegexTokenizer, StringIndexer, Word2Vec
+from pyspark.ml.classification import LogisticRegression
+from pyspark.ml import Pipeline
+from pyspark.mllib.evaluation import MulticlassMetrics
+
 spark = SparkSession \
 		.builder \
 		.appName("Big data project") \
@@ -76,6 +81,8 @@ def semanticType(colName, df):
         return
 
     def NAME(df):
+        #take column one and make predictions
+        predictions = model.transform(...)
         return
 
     def LEVEN(df):
@@ -92,6 +99,37 @@ for file in files:
     fileData = file.split(".")
     colName = fileData[1]
     Column_Names.append(colName)
+
+address_df = getDataCustom('/user/jys308/Address_Point.csv')
+permit_df = getDataCustom('/user/jys308/Approved_Permits.csv')
+address_df.createOrReplaceTempView("address_df")
+permit_df.createOrReplaceTempView("permit_df")
+
+full_st_name = spark.sql("SELECT DISTINCT FULL_STREE as TEXT FROM address_df")
+st_name = spark.sql("SELECT DISTINCT ST_NAME as TEXT FROM address_df")
+first_name = spark.sql("SELECT `Applicant First Name` as TEXT from permit_df")
+last_name = spark.sql("SELECT `Applicant Last Name` as TEXT from permit_df")
+business_name = spark.sql("SELECT DISTINCT `Applicant Business Name` as TEXT FROM permit_df")
+
+st_name = st_name.withColumn('category', lit('STREETNAME'))
+full_st_name = full_st_name.withColumn('category', lit('STREETNAME'))
+first_name = first_name.withColumn('category', lit('HUMANNAME'))
+last_name = last_name.withColumn('category', lit('HUMANNAME'))
+business_name = business_name.withColumn('category', lit('BUSINESSNAME'))
+
+train1 = business_name.union(st_name)
+train2 = first_name.union(last_name)
+train3 = train1.union(train2)
+trainingData =  train3.union(full_st_name)
+trainingData = trainingData.dropna()
+
+indexer   = StringIndexer(inputCol="category", outputCol="label")
+tokenizer = RegexTokenizer(pattern=u'\W+', inputCol="TEXT", outputCol="words", toLowercase=False)
+hashingTF = HashingTF(inputCol="words", outputCol="rawFeatures")
+idf       = IDF(inputCol="rawFeatures", outputCol="features")
+lr        = LogisticRegression(maxIter=20, regParam=0.001)
+pipeline = Pipeline(stages=[indexer, tokenizer, hashingTF, idf, lr])
+model = pipeline.fit(trainingData)
 
 for file in files:
 	fileData = file.split(".")
