@@ -52,7 +52,6 @@ files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 ########################################
 
 def semanticType(colName, df):
-    types = {}
     """
     The semantic types:
     1) Person name (Last name, First name, Middle name, Full name) NAME
@@ -97,9 +96,11 @@ def semanticType(colName, df):
         return
 
     types_names = {}
+    types_regex = {}
+    types_leven = {}
 
     #check levenshtein distance with NAME
-    if fuzz.partial_ratio(colName.lower(), 'name') > 0.5:
+    if (fuzz.partial_ratio(colName.lower(), 'name') > 0.75) or (fuzz.partial_ratio(colName.lower(), 'street') > 0.75):
         types_names = NAME(df)
 
     types_regex = REGEX(df)
