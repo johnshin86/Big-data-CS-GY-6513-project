@@ -180,7 +180,6 @@ def semanticType(colName, df):
         ###############
         # Cities
         ###############
-        """
         cities_columns = cities_df.columns
         cities_crossjoin = df.crossJoin(cities_df)
         cities_levy = cities_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('cities')))
@@ -333,7 +332,6 @@ def semanticType(colName, df):
             #will this indexing cause issues if first column is integer schema?
             parks_frequency = park_counts.groupBy().sum().collect()[0][0]
             types['parks'] = parks_frequency
-        """
 
 	################
 	# Building Codes
@@ -394,6 +392,7 @@ train1 = business_name.union(st_name)
 train2 = first_name.union(last_name)
 train3 = train1.union(train2)
 fullData =  train3.union(full_st_name)
+fullData = fullData.dropna()
 
 #(trainingData, testData) = fullData.randomSplit([0.9, 0.1])
 
@@ -436,24 +435,133 @@ model = pipeline.fit(fullData)
 14) Type of Location
 15) Parks/Playgrounds
 """
+###
+# Cities
+###
+cities_file = open("/home/jys308/cities.txt")
+cities_list = []
 
-"""
+for line in cities_file:
+    line = line.split()
+    cities_list.append(line[0])
+
 cities_df = spark.createDataFrame(list(map(lambda x: Row(cities=x), cities_list)))
-neighborhood_df = spark.createDataFrame(list(map(lambda x: Row(neighborhood=x), neighborhood_list)))
-borough_df = spark.createDataFrame(list(map(lambda x: Row(borough=x), borough_list)))
-schoolname_df = spark.createDataFrame(list(map(lambda x: Row(schoolname=x), schoolname_list)))
-color_df = spark.createDataFrame(list(map(lambda x: Row(color=x), color_list)))
-carmake_df = spark.createDataFrame(list(map(lambda x: Row(carmake=x), carmake_list)))
-cityagency_df = spark.createDataFrame(list(map(lambda x: Row(cityagency=x), cityagency_list)))
-areastudy_df = spark.createDataFrame(list(map(lambda x: Row(areastudy=x), areastudy_list)))
-subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subject_list)))
-schoollevels_df = spark.createDataFrame(list(map(lambda x: Row(schoollevels=x), schoollevels_list)))
-college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_list)))
-vehicletype_df = spark.createDataFrame(list(map(lambda x: Row(vehicletype=x), vehicletype_list)))
-typelocation_df = spark.createDataFrame(list(map(lambda x: Row(typelocation=x), typelocation_list)))
-parks_df = spark.createDataFrame(list(map(lambda x: Row(parks=x), parks_list)))
-"""
 
+###
+# Neighborhood
+###
+
+neighborhood_file = open("/home/jys308/neighborhood.txt")
+neighborhood_list = []
+
+for line in neighborhood_file:
+    line = line.split()
+    neighborhood_list.append(line[0])
+
+neighborhood_df = spark.createDataFrame(list(map(lambda x: Row(neighborhood=x), neighborhood_list)))
+
+###
+# Borough
+###
+
+borough_file = open("/home/jys308/borough.txt")
+borough_list = []
+
+for line in borough_list:
+    line = line.split()
+    borough_list.append(line[0])
+
+borough_df = spark.createDataFrame(list(map(lambda x: Row(borough=x), borough_list)))
+
+###
+# Schoolname
+###
+
+schoolname_file = open("/home/jys308/schoolname.txt")
+schoolname_list = []
+
+for line in schoolname_list:
+    line = line.split()
+    schoolname_list.append(line[0])
+
+schoolname_df = spark.createDataFrame(list(map(lambda x: Row(schoolname=x), schoolname_list)))
+
+###
+# Color
+###
+
+color_file = open("/home/jys308/color.txt")
+color_list = []
+
+for line in color_list:
+        line = line.split()
+            color_list.append(line[0])
+
+color_df = spark.createDataFrame(list(map(lambda x: Row(color=x), color_list)))
+
+###
+# Carmake
+###
+
+carmake_file = open("/home/jys308/carmake.txt")
+carmake_list = []
+
+for line in carmake_list:
+        line = line.split()
+            carmake_list.append(line[0])
+
+carmake_df = spark.createDataFrame(list(map(lambda x: Row(carmake=x), carmake_list)))
+
+###
+# City Agency
+###
+
+cityagency_df = spark.createDataFrame(list(map(lambda x: Row(cityagency=x), cityagency_list)))
+
+###
+# Area Study
+###
+
+areastudy_df = spark.createDataFrame(list(map(lambda x: Row(areastudy=x), areastudy_list)))
+
+###
+# Subjects
+###
+
+subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subject_list)))
+
+###
+# School Levels
+###
+
+schoollevels_df = spark.createDataFrame(list(map(lambda x: Row(schoollevels=x), schoollevels_list)))
+
+###
+# College
+###
+
+college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_list)))
+
+###
+# Vehicle Type
+###
+
+vehicletype_df = spark.createDataFrame(list(map(lambda x: Row(vehicletype=x), vehicletype_list)))
+
+###
+# Type Location
+###
+
+typelocation_df = spark.createDataFrame(list(map(lambda x: Row(typelocation=x), typelocation_list)))
+
+###
+# Parks
+###
+
+parks_df = spark.createDataFrame(list(map(lambda x: Row(parks=x), parks_list)))
+
+###
+# Building Codes
 ###
 
 building_codes_file = open("/home/jys308/building_codes.txt")
@@ -479,7 +587,7 @@ for file in files:
 	fileName = fileData[0]
 	colName = fileData[1]
 	df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-        types = semanticTypes(colName, df)
+        types = semanticType(colName, df)
         #process dictionary to record to json
 
 """
@@ -490,6 +598,6 @@ for file in one_file:
     fileName = fileData[0]
     colName = fileData[1]
     df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-    types = semanticTypes(colName, df)
+    types = semanticType(colName, df)
     with open('semantic_file_test.txt', 'w') as file:
         file.write(json.dumps(types))
