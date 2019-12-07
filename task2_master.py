@@ -244,6 +244,12 @@ model = pipeline.fit(fullData)
 #metrics.fMeasure()
 
 #######################################
+# Gathering Data for Levenshtein Distance checking
+#######################################
+
+
+
+#######################################
 # Iterate through all columns
 #######################################
 
