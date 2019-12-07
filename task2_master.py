@@ -94,19 +94,50 @@ def semanticType(colName, df):
         ########################
         web_regex = r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
 
+        zip_regex = r"11422 11422-7903 11598 11678787 11678-23 11723 11898-111 22222222-6666 14567-999999 11111-2222"
+        
+        latlong_regex = r'([0-9.-]+).+?([0-9.-]+)'
+
+        phone_regex = r'((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}'
+
+        #could improve the address regex
+
+        address_regex = r'^\d+\s[A-z]+\s[A-z]+'
+
         columns = df.columns
 
-        df_web = df.filter(df[columns[0]].rlike(WEB_URL_REGEX))
+        df_web = df.filter(df[columns[0]].rlike(web_regex))
+        df_zip = df.filter(df[columns[0]].rlike(zip_regex))
+        df_latlong =  df.filter(df[columns[0]].rlike(latlong_regex))
+        df_phone =  df.filter(df[columns[0]].rlike(phone_regex))
+        df_address =  df.filter(df[columns[0]].rlike(address_regex))
 
 	#Get rows from df_web, which will be webaddress, and sum the second column
 	#to get the semantic type WEBSITE.
         #only sum and add type if it exists
 
 	if len(df_web.take(1)) > 0:
-		#not sure which is faster
-		#web_frequency = df_web.rdd.map(lambda x: (1,x[1])).reduceByKey(lambda x,y: x + y).collect()[0][1
-		web_frequency = df_web.groupBy().sum()
-		types['web'] = web_frequency
+	    #not sure which is faster
+	    #web_frequency = df_web.rdd.map(lambda x: (1,x[1])).reduceByKey(lambda x,y: x + y).collect()[0][1]
+	    web_frequency = df_web.groupBy().sum().collect()[0][0]
+	    types['web'] = web_frequency
+
+        if len(df_zip.take(1)) > 0:
+            zip_frequency = df_zip.groupBy().sum().collect()[0][0]
+            types['zip'] = zip_frequency
+
+        if len(df_latlong.take(1)) > 0:
+            latlong_frequency = df_latlong.groupBy().sum().collect()[0][0]
+            types['latlong'] = latlong_frequency
+
+        if len(df_phone.take(1)) > 0:
+            phone_frequency = df_phone.groupBy().sum().collect()[0][0]
+            types['phone'] = phone_frequency
+
+        if len(df_address.take(1)) > 0:
+            address_frequency = df_address.groupBy().sum().collect()[0][0]
+            types['address'] = address_frequency
+
 
         return types
 
