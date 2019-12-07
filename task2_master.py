@@ -21,7 +21,7 @@ sqlContext=SQLContext(spark.sparkContext, sparkSession=spark, jsqlContext=None)
 
 import re
 
-from pyspark.ml.feature import HashingTF, IDF, RegexTokenizer, StringIndexer, Word2Vec
+from pyspark.ml.feature import HashingTF, IDF, RegexTokenizer, IndexToString, StringIndexer, Word2Vec
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml import Pipeline
 from pyspark.mllib.evaluation import MulticlassMetrics
@@ -144,8 +144,31 @@ def semanticType(colName, df):
 
     def NAME(df):
         types = {}
+	columns = df.columns
         #take column one and make predictions
-        predictions = model.transform(...)
+
+	df= df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"))
+
+        pred = model.transform(df.select('TEXT'))
+	pred_categories = pred.select('TEXT', 'originalcategory')
+	new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
+	
+	street_name_df = new_df.filter(new_df['originalcategory'] == 'STREETNAME')
+	human_df = new_df.filter(new_df['originalcategory'] == 'HUMANNAME')
+	business_df = new_df.filter(new_df['originalcategory'] == 'BUSINESSNAME')
+
+	if len(street_name_df.take(1)) > 0:
+            stname_frequency = street_name_df.groupBy().sum().collect()[0][0]
+            types['stname'] = stname_frequency
+
+	if len(human_df.take(1)) > 0:
+	    human_frequency = human_df.groupBy().sum().collect()[0][0]
+	    types['humanname'] = human_frequency
+
+	if len(business_df.take(1)) > 0:
+	    business_frequency = business_df.groupBy().sum().collect()[0][0]
+	    types['businessname'] = business_frequency
+
         return types
 
     def LEVEN(df):
@@ -179,6 +202,8 @@ permit_df = getDataCustom('/user/jys308/Approved_Permits.csv')
 address_df.createOrReplaceTempView("address_df")
 permit_df.createOrReplaceTempView("permit_df")
 
+#we could add more data, but this is what we had time for
+
 full_st_name = spark.sql("SELECT DISTINCT FULL_STREE as TEXT FROM address_df")
 st_name = spark.sql("SELECT DISTINCT ST_NAME as TEXT FROM address_df")
 first_name = spark.sql("SELECT `Applicant First Name` as TEXT from permit_df")
@@ -191,19 +216,32 @@ first_name = first_name.withColumn('category', lit('HUMANNAME'))
 last_name = last_name.withColumn('category', lit('HUMANNAME'))
 business_name = business_name.withColumn('category', lit('BUSINESSNAME'))
 
+
+
 train1 = business_name.union(st_name)
 train2 = first_name.union(last_name)
 train3 = train1.union(train2)
-trainingData =  train3.union(full_st_name)
-trainingData = trainingData.dropna()
+fullData =  train3.union(full_st_name)
 
-indexer = StringIndexer(inputCol="category", outputCol="label")
+#(trainingData, testData) = fullData.randomSplit([0.9, 0.1])
+
+#trainingData = trainingData.dropna()
+#testData = testData.dropna()
+
+indexer = StringIndexer(inputCol="category", outputCol="label").fit(trainingData)
 tokenizer = RegexTokenizer(pattern=u'\W+', inputCol="TEXT", outputCol="words", toLowercase=False)
 hashingTF = HashingTF(inputCol="words", outputCol="rawFeatures")
 idf = IDF(inputCol="rawFeatures", outputCol="features")
 lr = LogisticRegression(maxIter=20, regParam=0.001)
-pipeline = Pipeline(stages=[indexer, tokenizer, hashingTF, idf, lr])
-model = pipeline.fit(trainingData)
+labelConverter = IndexToString(inputCol="prediction", outputCol="originalcategory", labels=indexer.labels)
+
+pipeline = Pipeline(stages=[indexer, tokenizer, hashingTF, idf, lr, labelConverter])
+model = pipeline.fit(fullData)
+
+#pred = model.transform(testData)
+#pl = pred.select("label", "prediction").rdd.cache()
+#metrics = MulticlassMetrics(pl)
+#metrics.fMeasure()
 
 #######################################
 # Iterate through all columns
