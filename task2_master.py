@@ -174,14 +174,13 @@ def semanticType(colName, df):
         return types
 
     def LEVEN(df):
-
+	df_columns = df.columns
         ###############
         # Cities
         ###############
-        cities_df
         cities_columns = cities_df.columns
         cities_crossjoin = df.crossJoin(cities_df)
-        cities_levy = cities_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(cities_columns[0]), col('cities')))
+        cities_levy = cities_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('cities')))
         cities_count =  cities_levy.filter(cities_levy["word1_word2_levenshtein"] <= 2)
         if len(cities_count.take(1)) > 0:
             cities_frequency = cities_count.groupBy().sum().collect()[0][0]
@@ -192,7 +191,7 @@ def semanticType(colName, df):
         ###############
         neighborhood_columns = neighborhood_df.columns
         neighborhood_crossjoin = df.crossJoin(neighborhood_df)
-        neighborhood_levy = neighborhood_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(neighborhood_columns[0]), col('neighborhood')))
+        neighborhood_levy = neighborhood_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('neighborhood')))
         neighborhood_count =  neighborhood_levy.filter(neighborhood_levy["word1_word2_levenshtein"] <= 2)
         if len(neighborhood_count.take(1)) > 0:
             neighborhood_frequency = neighborhood_count.groupBy().sum().collect()[0][0]
@@ -203,7 +202,7 @@ def semanticType(colName, df):
         ###############
         borough_columns = borough_df.columns
         borough_crossjoin = df.crossJoin(borough_df)
-        borough_levy = borough_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(borough_columns[0]), col('borough')))
+        borough_levy = borough_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('borough')))
         borough_count =  borough_levy.filter(borough_levy["word1_word2_levenshtein"] <= 2)
         if len(borough_count.take(1)) > 0:
             borough_frequency = borough_count.groupBy().sum().collect()[0][0]
@@ -214,7 +213,7 @@ def semanticType(colName, df):
         ###############
         schoolname_columns = schoolname_df.columns
         schoolname_crossjoin = df.crossJoin(schoolname_df)
-        schoolname_levy = schoolname_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(schoolname_columns[0]), col('schoolname')))
+        schoolname_levy = schoolname_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('schoolname')))
         schoolname_count =  schoolname_levy.filter(schoolname_levy["word1_word2_levenshtein"] <= 2)
         if len(schoolname_count.take(1)) > 0:
             schoolname_frequency = schoolname_count.groupBy().sum().collect()[0][0]
@@ -225,7 +224,7 @@ def semanticType(colName, df):
         ###############
         color_columns = color_df.columns
         color_crossjoin = df.crossJoin(color_df)
-        color_levy = color_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(color_columns[0]), col('color')))
+        color_levy = color_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('color')))
         color_count =  color_levy.filter(color_levy["word1_word2_levenshtein"] <= 2)
         if len(color_count.take(1)) > 0:
             color_frequency = color_count.groupBy().sum().collect()[0][0]
@@ -236,7 +235,7 @@ def semanticType(colName, df):
         ###############
         carmake_columns = carmake_df.columns
         carmake_crossjoin = df.crossJoin(carmake_df)
-        carmake_levy = carmake_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(carmake_columns[0]), col('carmake')))
+        carmake_levy = carmake_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]]), col('carmake')))
         carmake_count =  carmake_levy.filter(carmake_levy["word1_word2_levenshtein"] <= 2)
         if len(carmake_count.take(1)) > 0:
             carmake_frequency = carmake_count.groupBy().sum().collect()[0][0]
@@ -248,7 +247,7 @@ def semanticType(colName, df):
         ###############
         cityagency_columns = cityagency_df.columns
         cityagency_crossjoin = df.crossJoin(cityagency_df)
-        cityagency_levy = cityagency_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(cityagency_columns[0]), col('cityagency')))
+        cityagency_levy = cityagency_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('cityagency')))
         cityagency_count =  cityagency_levy.filter(cityagency_levy["word1_word2_levenshtein"] <= 2)
         if len(cityagency_count.take(1)) > 0:
             cityagency_frequency = cityagency_count.groupBy().sum().collect()[0][0]
@@ -259,7 +258,7 @@ def semanticType(colName, df):
         ##############
         areastudy_columns = areastudy_df.columns
         areastudy_crossjoin = df.crossJoin(areastudy_df)
-        areastudy_levy = areastudy_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(areastudy_columns[0]), col('areastudy')))
+        areastudy_levy = areastudy_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('areastudy')))
         areastudy_count =  areastudy_levy.filter(areastudy_levy["word1_word2_levenshtein"] <= 2)
         if len(areastudy_count.take(1)) > 0:
             areastudy_frequency = areastudy_count.groupBy().sum().collect()[0][0]
@@ -270,7 +269,7 @@ def semanticType(colName, df):
         ##############
         subjects_columns = subjects_df.columns
         subjects_crossjoin = df.crossJoin(subjects_df)
-        subjects_levy = subjects_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(subjects_columns[0]), col('subjects')))
+        subjects_levy = subjects_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('subjects')))
         subjects_count =  subjects_levy.filter(subjects_levy["word1_word2_levenshtein"] <= 2)
         if len(subjects_count.take(1)) > 0:
             subjects_frequency = subjects_count.groupBy().sum().collect()[0][0]
@@ -281,7 +280,7 @@ def semanticType(colName, df):
         ##############
         schoollevels_columns = schoollevels_df.columns
         schoollevels_crossjoin = df.crossJoin(schoollevels_df)
-        schoollevels_levy = schoollevels_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(schoollevels_columns[0]), col('schoollevels')))
+        schoollevels_levy = schoollevels_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('schoollevels')))
         schoollevels_count =  schoollevels_levy.filter(schoollevels_levy["word1_word2_levenshtein"] <= 2)
         if len(schoollevels_count.take(1)) > 0:
             schoollevels_frequency = schoollevels_count.groupBy().sum().collect()[0][0]
@@ -292,7 +291,7 @@ def semanticType(colName, df):
         ##############
         colleges_columns = college_df.columns
         college_crossjoin = df.crossJoin(college_df)
-        college_levy = college_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(colleges_columns[0]), col('college')))
+        college_levy = college_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('college')))
         college_counts = college_levy.filter(college_levy["word1_word2_levenshtein"] <= 2)
         if len(college_counts.take(1)) > 0:
             college_frequency = college_counts.groupBy().sum().collect()[0][0]
@@ -303,7 +302,7 @@ def semanticType(colName, df):
         ##############
         vehicletype_columns = vehicletype_df.columns
         vehicletype_crossjoin = df.crossJoin(vehicletype_df)
-        vehicletype_levy = vehicletype_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(vehicletype_columns[0]), col('vehicletype')))
+        vehicletype_levy = vehicletype_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('vehicletype')))
         vehicletype_counts = vehicletype_levy.filter(vehicletype_levy["word1_word2_levenshtein"] <= 2)
         if len(vehicletype_counts.take(1)) > 0:
             vehicletype_frequency = vehicletype_counts.groupBy().sum().collect()[0][0]
@@ -314,7 +313,7 @@ def semanticType(colName, df):
         ##############
         typelocation_columns = typelocation_df.columns
         typelocation_crossjoin = df.crossJoin(typelocation_df)
-        typelocation_levy = typelocation_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(typelocation_columns[0]), col('typelocation')))
+        typelocation_levy = typelocation_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('typelocation')))
         typelocation_counts = typelocation_levy.filter(typelocation_levy["word1_word2_levenshtein"] <= 2)
         if len(typelocation_counts.take(1)) > 0:
             typelocation_frequency = typelocation_counts.groupBy().sum().collect()[0][0]
@@ -325,7 +324,7 @@ def semanticType(colName, df):
         ##############
         parks_columns = parks_df.columns
         parks_crossjoin = df.crossJoin(park_df)
-        parks_levy = parks_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(parks_columns[0]), col('parks')))
+        parks_levy = parks_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('parks')))
         park_counts = parks_levy.filter(parks_levy['word1_word2_levenshtein'] <= 2)
         if len(park_counts.take(1)) > 0:
             #will this indexing cause issues if first column is integer schema?
@@ -336,10 +335,9 @@ def semanticType(colName, df):
 	################
 	# Building Codes
 	################
-
 	building_columns = building_code_df.columns
 	building_crossjoin = df.crossJoin(building_code_df)
-	building_code_levy = building_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(building_columns[0]), col('building_codes')))
+	building_code_levy = building_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('building_codes')))
 	building_counts = building_code_levy.filter(building_code_levy['word1_word2_levenshtein'] <= 1)
 	if len(building_counts.take(1)) > 0:
 		building_code_frequency = building_counts.groupBy().sum().collect()[0][0]
@@ -483,6 +481,7 @@ for file in files:
         #process dictionary to record to json
 
 """
+one_file = files[:1]
 for file in one_file:
 	fileData = file.split(".")
 	fileName = fileData[0]
