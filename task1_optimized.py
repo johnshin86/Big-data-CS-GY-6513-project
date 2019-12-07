@@ -2,6 +2,7 @@ import os
 import gc
 import csv
 import json
+import string
 import pyspark
 from pyspark import SparkContext
 
@@ -114,6 +115,7 @@ freqColItems = []
 freqId = 0
 #Processing should be done inside for loop for each dataset
 for file in files:
+	print(file)
 	data = {}
 	data["dataset_name"] = file
 	df = getData(file)
