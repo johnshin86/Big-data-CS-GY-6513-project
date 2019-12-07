@@ -88,7 +88,8 @@ def semanticType(colName, df):
 
 
 
-    def REGEX(df, types):
+    def REGEX(df):
+        types = {}
         ########################
         # There are five types that we will find with regex
         ########################
@@ -142,12 +143,14 @@ def semanticType(colName, df):
         return types
 
     def NAME(df):
+        types = {}
         #take column one and make predictions
         predictions = model.transform(...)
-        return
+        return types
 
     def LEVEN(df):
-        return
+        types = {}
+        return types
 
     types_names = {}
     types_regex = {}
