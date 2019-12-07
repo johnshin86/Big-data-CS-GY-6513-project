@@ -238,13 +238,25 @@ def semanticType(colName, df):
         ##############
         # Type of Location
         ##############
-        typelocation_df
+        typelocation_columns = typelocation_df.columns
+        typelocation_crossjoin = df.crossJoin(typelocation_df)
+        typelocation_levy = typelocation_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(typelocation_columns[0]), col('typelocation')))
+        typelocation_counts = typelocation_levy.filter(typelocation_levy["word1_word2_levenshtein"] <= 2)
+        if len(typelocation_counts.take(1)) > 0:
+            typelocation_frequency = typelocation_counts.groupBy().sum().collect()[0][0]
+            types['typelocation'] = typelocation_frequency
 
         ##############
         # Parks
         ##############
-        parks_df
-
+        parks_columns = parks_df.columns
+        parks_crossjoin = df.crossJoin(park_df)
+        parks_levy = parks_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(parks_columns[0]), col('parks')))
+        park_counts = parks_levy.filter(parks_levy['word1_word2_levenshtein'] <= 2)
+        if len(park_counts.take(1)) > 0:
+            #will this indexing cause issues if first column is integer schema?
+            parks_frequency = park_counts.groupBy().sum().collect()[0][0]
+            types['parks'] = parks_frequency
 
 
 	################
