@@ -2,6 +2,7 @@ import os
 import gc
 import csv
 import json
+import string
 import pyspark
 from pyspark import SparkContext
 
@@ -114,6 +115,7 @@ freqColItems = []
 freqId = 0
 #Processing should be done inside for loop for each dataset
 for file in files:
+	print(file)
 	data = {}
 	data["dataset_name"] = file
 	df = getData(file)
@@ -121,7 +123,7 @@ for file in files:
 	df = df.toDF(*colNamesList)
 	rdd = df.rdd
 	# 1 & 2
-	emptyDf = df.select([count(when(isnan(c) | col(c).contains('NA') | col(c).contains('NULL') | col(c).isNull(),c)).alias(c) for c in df.columns])
+	emptyDf = df.select([count(when(col(c).contains('N/A')| col(c).contains('NA') | col(c).contains('NULL') | col(c).isNull(),c)).alias(c) for c in df.columns])
 	emptyCount = emptyDf.rdd.map(lambda row : row.asDict()).collect()[0]
 	rows = rdd.countApprox(timeout=8000)
 	del rdd
