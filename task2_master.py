@@ -84,8 +84,31 @@ def semanticType(colName, df):
     output: dictionary with keys as semantic types and values as count
     """
 
-    def REGEX(df):
-        return
+    types = {}
+
+
+
+    def REGEX(df, types):
+        ########################
+        # There are five types that we will find with regex
+        ########################
+        web_regex = r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
+
+        columns = df.columns
+
+        df_web = df.filter(df[columns[0]].rlike(WEB_URL_REGEX))
+
+	#Get rows from df_web, which will be webaddress, and sum the second column
+	#to get the semantic type WEBSITE.
+        #only sum and add type if it exists
+
+	if len(df_web.take(1)) > 0:
+		#not sure which is faster
+		#web_frequency = df_web.rdd.map(lambda x: (1,x[1])).reduceByKey(lambda x,y: x + y).collect()[0][1
+		web_frequency = df_web.groupBy().sum()
+		types['web'] = web_frequency
+
+        return types
 
     def NAME(df):
         #take column one and make predictions
