@@ -1,6 +1,7 @@
 import os
 import pyspark
 from pyspark import SparkContext
+import json
 
 from dateutil import parser
 
@@ -19,7 +20,6 @@ from pyspark.sql.functions import lit
 from pyspark.sql.functions import levenshtein  
 
 from pyspark.sql import SQLContext
-sqlContext=SQLContext(spark.sparkContext, sparkSession=spark, jsqlContext=None)
 
 import re
 
@@ -36,6 +36,8 @@ spark = SparkSession \
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
+sqlContext=SQLContext(spark.sparkContext, sparkSession=spark, jsqlContext=None)
+
 def getData(file):
     return spark.read.option("delimiter", "\\t").option("inferSchema", "true").option("header","true").csv(file, inferSchema=True)
 
@@ -45,7 +47,7 @@ def getDataCustom(file):
 
 
 with open("/home/jys308/cluster1.txt","r") as f:
-	content = f.readlines()
+    content = f.readlines()
 
 files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 
@@ -119,11 +121,12 @@ def semanticType(colName, df):
 	#to get the semantic type WEBSITE.
         #only sum and add type if it exists
 
-	if len(df_web.take(1)) > 0:
+        if len(df_web.take(1)) > 0:
 	    #not sure which is faster
-	    #web_frequency = df_web.rdd.map(lambda x: (1,x[1])).reduceByKey(lambda x,y: x + y).collect()[0][1]
-	    web_frequency = df_web.groupBy().sum().collect()[0][0]
-	    types['web'] = web_frequency
+            web_frequency = df_web.groupBy().sum().collect()[0][0]
+            types['web'] = web_frequency
+            #web_frequency = df_web.rdd.map(lambda x: (1,x[1])).reduceByKey(lambda x,y: x + y).collect()[0][1]
+
 
         if len(df_zip.take(1)) > 0:
             zip_frequency = df_zip.groupBy().sum().collect()[0][0]
@@ -146,38 +149,38 @@ def semanticType(colName, df):
 
     def NAME(df):
         types = {}
-	columns = df.columns
+        columns = df.columns
         #take column one and make predictions
-
-	df= df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"))
-
+        df = df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"))
         pred = model.transform(df.select('TEXT'))
-	pred_categories = pred.select('TEXT', 'originalcategory')
-	new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
+        pred_categories = pred.select('TEXT', 'originalcategory')
+        new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
 	
-	street_name_df = new_df.filter(new_df['originalcategory'] == 'STREETNAME')
-	human_df = new_df.filter(new_df['originalcategory'] == 'HUMANNAME')
-	business_df = new_df.filter(new_df['originalcategory'] == 'BUSINESSNAME')
+        street_name_df = new_df.filter(new_df['originalcategory'] == 'STREETNAME')
+        human_df = new_df.filter(new_df['originalcategory'] == 'HUMANNAME')
+        business_df = new_df.filter(new_df['originalcategory'] == 'BUSINESSNAME')
 
-	if len(street_name_df.take(1)) > 0:
+        if len(street_name_df.take(1)) > 0:
             stname_frequency = street_name_df.groupBy().sum().collect()[0][0]
             types['stname'] = stname_frequency
 
-	if len(human_df.take(1)) > 0:
-	    human_frequency = human_df.groupBy().sum().collect()[0][0]
-	    types['humanname'] = human_frequency
+        if len(human_df.take(1)) > 0:
+            human_frequency = human_df.groupBy().sum().collect()[0][0]
+            types['humanname'] = human_frequency
 
-	if len(business_df.take(1)) > 0:
-	    business_frequency = business_df.groupBy().sum().collect()[0][0]
-	    types['businessname'] = business_frequency
+        if len(business_df.take(1)) > 0:
+            business_frequency = business_df.groupBy().sum().collect()[0][0]
+            types['businessname'] = business_frequency
 
         return types
 
     def LEVEN(df):
-	df_columns = df.columns
+        types = {}
+        df_columns = df.columns
         ###############
         # Cities
         ###############
+        """
         cities_columns = cities_df.columns
         cities_crossjoin = df.crossJoin(cities_df)
         cities_levy = cities_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('cities')))
@@ -330,22 +333,18 @@ def semanticType(colName, df):
             #will this indexing cause issues if first column is integer schema?
             parks_frequency = park_counts.groupBy().sum().collect()[0][0]
             types['parks'] = parks_frequency
-
+        """
 
 	################
 	# Building Codes
 	################
-	building_columns = building_code_df.columns
-	building_crossjoin = df.crossJoin(building_code_df)
-	building_code_levy = building_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('building_codes')))
-	building_counts = building_code_levy.filter(building_code_levy['word1_word2_levenshtein'] <= 1)
-	if len(building_counts.take(1)) > 0:
-		building_code_frequency = building_counts.groupBy().sum().collect()[0][0]
-		types['building_code'] = building_code_frequency
-
-
-
-        types = {}
+        building_columns = building_code_df.columns
+        building_crossjoin = df.crossJoin(building_code_df)
+        building_code_levy = building_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('building_codes')))
+        building_counts = building_code_levy.filter(building_code_levy['word1_word2_levenshtein'] <= 1)
+        if len(building_counts.take(1)) > 0:
+            building_code_frequency = building_counts.groupBy().sum().collect()[0][0]
+            types['building_code'] = building_code_frequency
         return types
 
     types_names = {}
@@ -401,7 +400,7 @@ fullData =  train3.union(full_st_name)
 #trainingData = trainingData.dropna()
 #testData = testData.dropna()
 
-indexer = StringIndexer(inputCol="category", outputCol="label").fit(trainingData)
+indexer = StringIndexer(inputCol="category", outputCol="label").fit(fullData)
 tokenizer = RegexTokenizer(pattern=u'\W+', inputCol="TEXT", outputCol="words", toLowercase=False)
 hashingTF = HashingTF(inputCol="words", outputCol="rawFeatures")
 idf = IDF(inputCol="rawFeatures", outputCol="features")
@@ -438,6 +437,7 @@ model = pipeline.fit(fullData)
 15) Parks/Playgrounds
 """
 
+"""
 cities_df = spark.createDataFrame(list(map(lambda x: Row(cities=x), cities_list)))
 neighborhood_df = spark.createDataFrame(list(map(lambda x: Row(neighborhood=x), neighborhood_list)))
 borough_df = spark.createDataFrame(list(map(lambda x: Row(borough=x), borough_list)))
@@ -452,6 +452,7 @@ college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_li
 vehicletype_df = spark.createDataFrame(list(map(lambda x: Row(vehicletype=x), vehicletype_list)))
 typelocation_df = spark.createDataFrame(list(map(lambda x: Row(typelocation=x), typelocation_list)))
 parks_df = spark.createDataFrame(list(map(lambda x: Row(parks=x), parks_list)))
+"""
 
 ###
 
@@ -472,6 +473,7 @@ building_code_df = spark.createDataFrame(list(map(lambda x: Row(building_codes=x
 # Iterate through all columns
 #######################################
 
+"""
 for file in files:
 	fileData = file.split(".")
 	fileName = fileData[0]
@@ -481,10 +483,13 @@ for file in files:
         #process dictionary to record to json
 
 """
+
 one_file = files[:1]
 for file in one_file:
-	fileData = file.split(".")
-	fileName = fileData[0]
-	colName = fileData[1]
-	df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-"""
+    fileData = file.split(".")
+    fileName = fileData[0]
+    colName = fileData[1]
+    df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
+    types = semanticTypes(colName, df)
+    with open('semantic_file_test.txt', 'w') as file:
+        file.write(json.dumps(types))
