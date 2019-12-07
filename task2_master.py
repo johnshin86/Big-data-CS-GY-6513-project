@@ -9,12 +9,14 @@ from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
 from pyspark.sql import functions as F
 from pyspark.sql.functions import udf
+from pyspark.sql import Row
 
 from pyspark.sql.functions import isnan, when, count, col
 
 from pyspark.ml.linalg import Vectors
 from pyspark.sql.functions import col
 from pyspark.sql.functions import lit
+from pyspark.sql.functions import levenshtein  
 
 from pyspark.sql import SQLContext
 sqlContext=SQLContext(spark.sparkContext, sparkSession=spark, jsqlContext=None)
@@ -172,6 +174,93 @@ def semanticType(colName, df):
         return types
 
     def LEVEN(df):
+
+        ###############
+        # Cities
+        ###############
+        cities_df
+
+        ###############
+        # Neighborhoods
+        ###############
+        neighborhood_df
+
+        ###############
+        # Borough
+        ###############
+        borough_df
+
+        ###############
+        # School Name
+        ###############
+        schoolname_df
+
+        ###############
+        # Color
+        ###############
+        color_df
+
+        ###############
+        # Carmake
+        ###############
+        carmake_df
+
+        ###############
+        # City Agency
+        ###############
+        cityagency_df
+
+        ##############
+        # Area of Study
+        ##############
+        areastudy_df
+
+        ##############
+        # Subjects
+        ##############
+        subjects_df
+
+        ##############
+        # School Levels
+        ##############
+        schoollevels_df
+
+        ##############
+        # Colleges
+        ##############
+        college_df
+
+        ##############
+        # Vehicle Type
+        ##############
+        vehicletype_df
+
+        ##############
+        # Type of Location
+        ##############
+        typelocation_df
+
+        ##############
+        # Parks
+        ##############
+        parks_df
+
+
+
+	################
+	# Building Codes
+	################
+
+	building_columns = building_code_df.columns
+	building_crossjoin = df.crossJoin(building_code_df)
+	building_code_levy = building_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(building_columns[0]), col('building_codes')))
+	building_counts = building_code_levy.filter(building_code_levy['word1_word2_levenshtein'] <= 1)
+	if len(building_counts.take(1)) > 0:
+		building_code_frequency = building_counts.groupBy().sum().collect()[0][0]
+		types['building_code'] = building_code_frequency
+
+
+
         types = {}
         return types
 
@@ -247,6 +336,52 @@ model = pipeline.fit(fullData)
 # Gathering Data for Levenshtein Distance checking
 #######################################
 
+"""
+1) City 
+2) Neighborhood
+3) Borough
+4) School Name
+5) Color
+6) Car Make
+7) City Agency
+8) Areas of Study
+9) Subjects in School
+10) School levels.
+11) College Universities
+12) Building Classification (DONE)
+13) Vehicle Type
+14) Type of Location
+15) Parks/Playgrounds
+"""
+
+cities_df = spark.createDataFrame(list(map(lambda x: Row(cities=x), cities_list)))
+neighborhood_df = spark.createDataFrame(list(map(lambda x: Row(neighborhood=x), neighborhood_list)))
+borough_df = spark.createDataFrame(list(map(lambda x: Row(borough=x), borough_list)))
+schoolname_df = spark.createDataFrame(list(map(lambda x: Row(schoolname=x), schoolname_list)))
+color_df = spark.createDataFrame(list(map(lambda x: Row(color=x), color_list)))
+carmake_df = spark.createDataFrame(list(map(lambda x: Row(carmake=x), carmake_list)))
+cityagency_df = spark.createDataFrame(list(map(lambda x: Row(cityagency=x), cityagency_list)))
+areastudy_df = spark.createDataFrame(list(map(lambda x: Row(areastudy=x), areastudy_list)))
+subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subject_list)))
+schoollevels_df = spark.createDataFrame(list(map(lambda x: Row(schoollevels=x), schoollevels_list)))
+college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_list)))
+vehicletype_df = spark.createDataFrame(list(map(lambda x: Row(vehicletype=x), vehicletype_list)))
+typelocation_df = spark.createDataFrame(list(map(lambda x: Row(typelocation=x), typelocation_list)))
+parks_df = spark.createDataFrame(list(map(lambda x: Row(parks=x), parks_list)))
+
+###
+
+building_codes_file = open("/home/jys308/building_codes.txt")
+building_codes_list = []
+
+for line in building_codes_file:
+    line = line.split()
+    building_codes_list.append(line[0])
+
+building_code_df = spark.createDataFrame(list(map(lambda x: Row(building_codes=x), building_codes_list)))
+
+####
+
 
 
 #######################################
@@ -261,3 +396,10 @@ for file in files:
         types = semanticTypes(colName, df)
         #process dictionary to record to json
 
+"""
+for file in one_file:
+	fileData = file.split(".")
+	fileName = fileData[0]
+	colName = fileData[1]
+	df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
+"""
