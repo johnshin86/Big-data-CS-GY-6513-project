@@ -54,16 +54,16 @@ files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 def semanticType(colName, df):
     """
     The semantic types:
-    1) Person name (Last name, First name, Middle name, Full name) NAME
-    2) Business name NAME
-    3) Phone Number REGEX
-    4) Address REGEX
-    5) Street name NAME
+    1) Person name (Last name, First name, Middle name, Full name) NAME (DONE)
+    2) Business name NAME (DONE)
+    3) Phone Number REGEX (DONE)
+    4) Address REGEX (DONE)
+    5) Street name NAME (DONE)
     6) City LEVEN
     7) Neighborhood LEVEN
-    8) LAT/LON coordinates REGEX
-    9) Zip code REGEX
-    10) Borough LEVEN
+    8) LAT/LON coordinates REGEX (DONE)
+    9) Zip code REGEX (DONE)
+    10) Borough LEVEN 
     11) School name (Abbreviations and full names) LEVEN
     12) Color LEVEN
     13) Car make LEVEN
@@ -72,7 +72,7 @@ def semanticType(colName, df):
     16) Subjects in school (e.g., MATH A, MATH B, US HISTORY) LEVEN
     17) School Levels (K-2, ELEMENTARY, ELEMENTARY SCHOOL, MIDDLE) LEVEN
     18) College/University names LEVEN
-    19) Websites (e.g., ASESCHOLARS.ORG) REGEX
+    19) Websites (e.g., ASESCHOLARS.ORG) REGEX (DONE)
     20) Building Classification (e.g., R0-CONDOMINIUM, R2-WALK-UP) LEVEN
     21) Vehicle Type (e.g., AMBULANCE, VAN, TAXI, BUS) LEVEN
     22) Type of location (e.g., ABANDONED BUILDING, AIRPORT TERMINAL, BANK, CHURCH, CLOTHING/BOUTIQUE) LEVEN
