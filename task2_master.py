@@ -179,61 +179,135 @@ def semanticType(colName, df):
         # Cities
         ###############
         cities_df
+        cities_columns = cities_df.columns
+        cities_crossjoin = df.crossJoin(cities_df)
+        cities_levy = cities_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(cities_columns[0]), col('cities')))
+        cities_count =  cities_levy.filter(cities_levy["word1_word2_levenshtein"] <= 2)
+        if len(cities_count.take(1)) > 0:
+            cities_frequency = cities_count.groupBy().sum().collect()[0][0]
+            types['cities'] = cities_frequency
 
         ###############
         # Neighborhoods
         ###############
-        neighborhood_df
+        neighborhood_columns = neighborhood_df.columns
+        neighborhood_crossjoin = df.crossJoin(neighborhood_df)
+        neighborhood_levy = neighborhood_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(neighborhood_columns[0]), col('neighborhood')))
+        neighborhood_count =  neighborhood_levy.filter(neighborhood_levy["word1_word2_levenshtein"] <= 2)
+        if len(neighborhood_count.take(1)) > 0:
+            neighborhood_frequency = neighborhood_count.groupBy().sum().collect()[0][0]
+            types['neighborhood'] = neighborhood_frequency
 
         ###############
         # Borough
         ###############
-        borough_df
+        borough_columns = borough_df.columns
+        borough_crossjoin = df.crossJoin(borough_df)
+        borough_levy = borough_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(borough_columns[0]), col('borough')))
+        borough_count =  borough_levy.filter(borough_levy["word1_word2_levenshtein"] <= 2)
+        if len(borough_count.take(1)) > 0:
+            borough_frequency = borough_count.groupBy().sum().collect()[0][0]
+            types['borough'] = borough_frequency
 
         ###############
         # School Name
         ###############
-        schoolname_df
+        schoolname_columns = schoolname_df.columns
+        schoolname_crossjoin = df.crossJoin(schoolname_df)
+        schoolname_levy = schoolname_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(schoolname_columns[0]), col('schoolname')))
+        schoolname_count =  schoolname_levy.filter(schoolname_levy["word1_word2_levenshtein"] <= 2)
+        if len(schoolname_count.take(1)) > 0:
+            schoolname_frequency = schoolname_count.groupBy().sum().collect()[0][0]
+            types['schoolname'] = schoolname_frequency
 
         ###############
         # Color
         ###############
-        color_df
+        color_columns = color_df.columns
+        color_crossjoin = df.crossJoin(color_df)
+        color_levy = color_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(color_columns[0]), col('color')))
+        color_count =  color_levy.filter(color_levy["word1_word2_levenshtein"] <= 2)
+        if len(color_count.take(1)) > 0:
+            color_frequency = color_count.groupBy().sum().collect()[0][0]
+            types['color'] = color_frequency
 
         ###############
         # Carmake
         ###############
-        carmake_df
+        carmake_columns = carmake_df.columns
+        carmake_crossjoin = df.crossJoin(carmake_df)
+        carmake_levy = carmake_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(carmake_columns[0]), col('carmake')))
+        carmake_count =  carmake_levy.filter(carmake_levy["word1_word2_levenshtein"] <= 2)
+        if len(carmake_count.take(1)) > 0:
+            carmake_frequency = carmake_count.groupBy().sum().collect()[0][0]
+            types['carmake'] = carmake_frequency
+        
 
         ###############
         # City Agency
         ###############
-        cityagency_df
+        cityagency_columns = cityagency_df.columns
+        cityagency_crossjoin = df.crossJoin(cityagency_df)
+        cityagency_levy = cityagency_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(cityagency_columns[0]), col('cityagency')))
+        cityagency_count =  cityagency_levy.filter(cityagency_levy["word1_word2_levenshtein"] <= 2)
+        if len(cityagency_count.take(1)) > 0:
+            cityagency_frequency = cityagency_count.groupBy().sum().collect()[0][0]
+            types['cityagency'] = cityagency_frequency
 
         ##############
         # Area of Study
         ##############
-        areastudy_df
+        areastudy_columns = areastudy_df.columns
+        areastudy_crossjoin = df.crossJoin(areastudy_df)
+        areastudy_levy = areastudy_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(areastudy_columns[0]), col('areastudy')))
+        areastudy_count =  areastudy_levy.filter(areastudy_levy["word1_word2_levenshtein"] <= 2)
+        if len(areastudy_count.take(1)) > 0:
+            areastudy_frequency = areastudy_count.groupBy().sum().collect()[0][0]
+            types['areastudy'] = areastudy_frequency
 
         ##############
         # Subjects
         ##############
-        subjects_df
+        subjects_columns = subjects_df.columns
+        subjects_crossjoin = df.crossJoin(subjects_df)
+        subjects_levy = subjects_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(subjects_columns[0]), col('subjects')))
+        subjects_count =  subjects_levy.filter(subjects_levy["word1_word2_levenshtein"] <= 2)
+        if len(subjects_count.take(1)) > 0:
+            subjects_frequency = subjects_count.groupBy().sum().collect()[0][0]
+            types['subjects'] = subjects_frequency
 
         ##############
         # School Levels
         ##############
-        schoollevels_df
+        schoollevels_columns = schoollevels_df.columns
+        schoollevels_crossjoin = df.crossJoin(schoollevels_df)
+        schoollevels_levy = schoollevels_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(schoollevels_columns[0]), col('schoollevels')))
+        schoollevels_count =  schoollevels_levy.filter(schoollevels_levy["word1_word2_levenshtein"] <= 2)
+        if len(schoollevels_count.take(1)) > 0:
+            schoollevels_frequency = schoollevels_count.groupBy().sum().collect()[0][0]
+            types['schoollevels'] = schoollevels_frequency
 
         ##############
         # Colleges
         ##############
-        college_df
+        colleges_columns = college_df.columns
+        college_crossjoin = df.crossJoin(college_df)
+        college_levy = college_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(colleges_columns[0]), col('college')))
+        college_counts = college_levy.filter(college_levy["word1_word2_levenshtein"] <= 2)
+        if len(college_counts.take(1)) > 0:
+            college_frequency = college_counts.groupBy().sum().collect()[0][0]
+            types['college'] = college_frequency
 
         ##############
         # Vehicle Type
         ##############
-        vehicletype_df
+        vehicletype_columns = vehicletype_df.columns
+        vehicletype_crossjoin = df.crossJoin(vehicletype_df)
+        vehicletype_levy = vehicletype_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(vehicletype_columns[0]), col('vehicletype')))
+        vehicletype_counts = vehicletype_levy.filter(vehicletype_levy["word1_word2_levenshtein"] <= 2)
+        if len(vehicletype_counts.take(1)) > 0:
+            vehicletype_frequency = vehicletype_counts.groupBy().sum().collect()[0][0]
+            types['vehicletype'] = vehicletype_frequency
 
         ##############
         # Type of Location
