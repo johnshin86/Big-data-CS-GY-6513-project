@@ -467,7 +467,7 @@ neighborhood_df = spark.createDataFrame(list(map(lambda x: Row(neighborhood=x), 
 borough_file = open("/home/jys308/borough.txt")
 borough_list = []
 
-for line in borough_list:
+for line in borough_file:
     line = line.split()
     borough_list.append(line[0])
 
@@ -480,7 +480,7 @@ borough_df = spark.createDataFrame(list(map(lambda x: Row(borough=x), borough_li
 schoolname_file = open("/home/jys308/schoolname.txt")
 schoolname_list = []
 
-for line in schoolname_list:
+for line in schoolname_file:
     line = line.split()
     schoolname_list.append(line[0])
 
@@ -493,7 +493,7 @@ schoolname_df = spark.createDataFrame(list(map(lambda x: Row(schoolname=x), scho
 color_file = open("/home/jys308/color.txt")
 color_list = []
 
-for line in color_list:
+for line in color_file:
     line = line.split()
     color_list.append(line[0])
 
@@ -506,7 +506,7 @@ color_df = spark.createDataFrame(list(map(lambda x: Row(color=x), color_list)))
 carmake_file = open("/home/jys308/carmake.txt")
 carmake_list = []
 
-for line in carmake_list:
+for line in carmake_file:
     line = line.split()
     carmake_list.append(line[0])
 
@@ -519,7 +519,7 @@ carmake_df = spark.createDataFrame(list(map(lambda x: Row(carmake=x), carmake_li
 cityagency_file = open("/home/jys308/cityagency.txt")
 cityagency_list = []
 
-for line in cityagency_list:
+for line in cityagency_file:
     line = line.split()
     cityagency_list.append(line[0])
 
@@ -532,7 +532,7 @@ cityagency_df = spark.createDataFrame(list(map(lambda x: Row(cityagency=x), city
 areastudy_file = open("/home/jys308/areastudy.txt")
 areastudy_list = []
 
-for line in areastudy_list:
+for line in areastudy_file:
     line = line.split()
     areastudy_list.append(line[0])
 
@@ -545,7 +545,7 @@ areastudy_df = spark.createDataFrame(list(map(lambda x: Row(areastudy=x), areast
 subjects_file = open("/home/jys308/subjects.txt")
 subjects_list = []
 
-for line in subjects_list:
+for line in subjects_file:
     line = line.split()
     subjects_list.append(line[0])
 
@@ -558,7 +558,7 @@ subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subject_
 schoollevels = open("/home/jys308/schoollevels.txt")
 schoollevels_list = []
 
-for line in schoollevels_list:
+for line in schoollevels_file:
     line = line.split()
     schoollevels_list.append(line[0])
 
@@ -568,12 +568,12 @@ schoollevels_df = spark.createDataFrame(list(map(lambda x: Row(schoollevels=x), 
 # College
 ###
 
-college_file = open("/home/jys308/college.txt")
+college_file = open("/home/jys308/college.txt", encoding="mbcs")
 college_list = []
 
-for line in college_list:
-    line = line.split()
-    college_list.append(line[0])
+for line in college_file:
+    line = line.split(',')
+    college_list.append(line[1])
 
 college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_list)))
 
@@ -584,7 +584,7 @@ college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_li
 vehicletype_file = open("/home/jys308/vehicletype.txt")
 vehicletype_list = []
 
-for line in vehicletype_list:
+for line in vehicletype_file:
     line = line.split()
     vehicletype_list.append(line[0])
 
@@ -596,7 +596,7 @@ vehicletype_df = spark.createDataFrame(list(map(lambda x: Row(vehicletype=x), ve
 typelocation_file = open("/home/jys308/typelocation.txt")
 typelocation_list = []
 
-for line in typelocation_list:
+for line in typelocation_file:
     line = line.split()
     typelocation_list.append(line[0])
 
@@ -609,7 +609,7 @@ typelocation_df = spark.createDataFrame(list(map(lambda x: Row(typelocation=x), 
 parks_file = open("/home/jys308/parks.txt")
 parks_list = []
 
-for line in parks_list:
+for line in parks_file:
     line = line.split()
     parks_list.append(line[0])
 
