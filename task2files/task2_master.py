@@ -375,7 +375,7 @@ def semanticType(colName, df):
 
 if path.exists("/home/jys308/weights"):
     print("Found weights, loading them...")
-    model = LogisticRegression.load("/home/jys308/weights")
+    model = PipelineModel.load("/home/jys308/weights")
 
 else:
     print("Training Classifier...")
