@@ -355,7 +355,7 @@ def semanticType(colName, df):
     types_leven = {}
 
     #check levenshtein distance with NAME
-    if (fuzz.partial_ratio(colName.lower(), 'name') > 0.75) or (fuzz.partial_ratio(colName.lower(), 'street') > 0.75):
+    if fuzz.partial_ratio(colName.lower(), 'name') > 0.75 or fuzz.partial_ratio(colName.lower(), 'street') > 0.75:
         types_names = NAME(df)
 
     types_regex = REGEX(df)
@@ -674,7 +674,7 @@ for file in files[:10]:
         json.dump(types, fp)
 
 
-
+#largest file index is 132
 
 
 """
