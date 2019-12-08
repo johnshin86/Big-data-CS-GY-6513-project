@@ -656,6 +656,8 @@ for file in files:
 	df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
         types = semanticType(colName, df)
         #process dictionary to record to json
+        with open(str(colName) +'.json', 'w') as fp:
+            json.dump(data, fp,default=datetime_handler)
 
 """
 
