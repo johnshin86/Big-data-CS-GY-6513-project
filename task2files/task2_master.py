@@ -27,7 +27,7 @@ import re
 
 from pyspark.ml.feature import HashingTF, IDF, RegexTokenizer, IndexToString, StringIndexer, Word2Vec
 from pyspark.ml.classification import LogisticRegression, LogisticRegressionModel
-from pyspark.ml import Pipeline
+from pyspark.ml import Pipeline, PipelineModel
 from pyspark.mllib.evaluation import MulticlassMetrics
 from fuzzywuzzy import fuzz
 import string
