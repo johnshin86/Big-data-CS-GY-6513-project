@@ -673,6 +673,10 @@ for file in files[:10]:
     with open(str(colName) +'.json', 'w') as fp:
         json.dump(types, fp)
 
+
+
+
+
 """
 
 files = files[:1]
