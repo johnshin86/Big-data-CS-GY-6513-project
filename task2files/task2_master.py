@@ -422,7 +422,7 @@ else:
 
     print("Done training classifier")
 
-    model.save("/home/jys308/weights")
+    model.save(spark, "/home/jys308/weights")
 
     #pred = model.transform(testData)
     #pl = pred.select("label", "prediction").rdd.cache()
