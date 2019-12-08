@@ -558,7 +558,7 @@ for line in subjects_file:
     line = line.split()
     subjects_list.append(line[0])
 
-subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subject_list)))
+subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subjects_list)))
 
 ###
 # School Levels
