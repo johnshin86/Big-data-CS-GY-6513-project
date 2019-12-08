@@ -373,8 +373,9 @@ def semanticType(colName, df):
 #################################
 
 
-if path.exists("weights"):
-    model = LogisticRegressionModel.load("weights")
+if path.exists("/home/jys308/weights"):
+    print("Found weights, loading them...")
+    model = LogisticRegressionModel.load("/home/jys308/weights")
 
 else:
     print("Training Classifier...")
@@ -421,7 +422,7 @@ else:
 
     print("Done training classifier")
 
-    model.save("weights")
+    model.save("/home/jys308/weights")
 
     #pred = model.transform(testData)
     #pl = pred.select("label", "prediction").rdd.cache()
