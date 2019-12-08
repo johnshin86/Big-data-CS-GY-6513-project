@@ -373,9 +373,9 @@ def semanticType(colName, df):
 #################################
 
 
-if path.exists("/home/jys308/weights"):
+if path.exists("weights"):
     print("Found weights, loading them...")
-    model = PipelineModel.load("/home/jys308/weights")
+    model = PipelineModel.load("weights")
 
 else:
     print("Training Classifier...")
