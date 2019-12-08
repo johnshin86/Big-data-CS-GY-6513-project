@@ -573,7 +573,8 @@ college_list = []
 
 for line in college_file:
     line = line.split(',')
-    college_list.append(line[1])
+    if line[0] == 'US':
+        college_list.append(line[1])
 
 college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_list)))
 
