@@ -564,7 +564,7 @@ subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subjects
 # School Levels
 ###
 
-schoollevels = open("/home/jys308/schoollevels.txt")
+schoollevels_file = open("/home/jys308/schoollevels.txt")
 schoollevels_list = []
 
 for line in schoollevels_file:
