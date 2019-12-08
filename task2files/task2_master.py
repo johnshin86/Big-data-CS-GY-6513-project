@@ -1,4 +1,6 @@
 import os
+import os.path
+from os import path
 import pyspark
 from pyspark import SparkContext
 import json
@@ -24,7 +26,7 @@ from pyspark.sql import SQLContext
 import re
 
 from pyspark.ml.feature import HashingTF, IDF, RegexTokenizer, IndexToString, StringIndexer, Word2Vec
-from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.classification import LogisticRegression, LogisticRegressionModel
 from pyspark.ml import Pipeline
 from pyspark.mllib.evaluation import MulticlassMetrics
 from fuzzywuzzy import fuzz
@@ -370,56 +372,61 @@ def semanticType(colName, df):
 # Train Classifier
 #################################
 
-print("Training Classifier...")
 
-address_df = getDataCustom('/user/jys308/Address_Point.csv')
-permit_df = getDataCustom('/user/jys308/Approved_Permits.csv')
-address_df.createOrReplaceTempView("address_df")
-permit_df.createOrReplaceTempView("permit_df")
+if path.exists("weights"):
+    model = LogisticRegressionModel.load("weights")
 
-#we could add more data, but this is what we had time for
+else:
+    print("Training Classifier...")
 
-full_st_name = spark.sql("SELECT DISTINCT FULL_STREE as TEXT FROM address_df")
-st_name = spark.sql("SELECT DISTINCT ST_NAME as TEXT FROM address_df")
-first_name = spark.sql("SELECT `Applicant First Name` as TEXT from permit_df")
-last_name = spark.sql("SELECT `Applicant Last Name` as TEXT from permit_df")
-business_name = spark.sql("SELECT DISTINCT `Applicant Business Name` as TEXT FROM permit_df")
+    address_df = getDataCustom('/user/jys308/Address_Point.csv')
+    permit_df = getDataCustom('/user/jys308/Approved_Permits.csv')
+    address_df.createOrReplaceTempView("address_df")
+    permit_df.createOrReplaceTempView("permit_df")
 
-st_name = st_name.withColumn('category', lit('STREETNAME'))
-full_st_name = full_st_name.withColumn('category', lit('STREETNAME'))
-first_name = first_name.withColumn('category', lit('HUMANNAME'))
-last_name = last_name.withColumn('category', lit('HUMANNAME'))
-business_name = business_name.withColumn('category', lit('BUSINESSNAME'))
+    #we could add more data, but this is what we had time for
 
+    full_st_name = spark.sql("SELECT DISTINCT FULL_STREE as TEXT FROM address_df")
+    st_name = spark.sql("SELECT DISTINCT ST_NAME as TEXT FROM address_df")
+    first_name = spark.sql("SELECT `Applicant First Name` as TEXT from permit_df")
+    last_name = spark.sql("SELECT `Applicant Last Name` as TEXT from permit_df")
+    business_name = spark.sql("SELECT DISTINCT `Applicant Business Name` as TEXT FROM permit_df")
 
+    st_name = st_name.withColumn('category', lit('STREETNAME'))
+    full_st_name = full_st_name.withColumn('category', lit('STREETNAME'))
+    first_name = first_name.withColumn('category', lit('HUMANNAME'))
+    last_name = last_name.withColumn('category', lit('HUMANNAME'))
+    business_name = business_name.withColumn('category', lit('BUSINESSNAME'))
 
-train1 = business_name.union(st_name)
-train2 = first_name.union(last_name)
-train3 = train1.union(train2)
-fullData =  train3.union(full_st_name)
-fullData = fullData.dropna()
+    train1 = business_name.union(st_name)
+    train2 = first_name.union(last_name)
+    train3 = train1.union(train2)
+    fullData =  train3.union(full_st_name)
+    fullData = fullData.dropna()
 
-#(trainingData, testData) = fullData.randomSplit([0.9, 0.1])
+    #(trainingData, testData) = fullData.randomSplit([0.9, 0.1])
 
-#trainingData = trainingData.dropna()
-#testData = testData.dropna()
+    #trainingData = trainingData.dropna()
+    #testData = testData.dropna()
 
-indexer = StringIndexer(inputCol="category", outputCol="label").fit(fullData)
-tokenizer = RegexTokenizer(pattern=u'\W+', inputCol="TEXT", outputCol="words", toLowercase=False)
-hashingTF = HashingTF(inputCol="words", outputCol="rawFeatures")
-idf = IDF(inputCol="rawFeatures", outputCol="features")
-lr = LogisticRegression(maxIter=20, regParam=0.001)
-labelConverter = IndexToString(inputCol="prediction", outputCol="originalcategory", labels=indexer.labels)
+    indexer = StringIndexer(inputCol="category", outputCol="label").fit(fullData)
+    tokenizer = RegexTokenizer(pattern=u'\W+', inputCol="TEXT", outputCol="words", toLowercase=False)
+    hashingTF = HashingTF(inputCol="words", outputCol="rawFeatures")
+    idf = IDF(inputCol="rawFeatures", outputCol="features")
+    lr = LogisticRegression(maxIter=20, regParam=0.001)
+    labelConverter = IndexToString(inputCol="prediction", outputCol="originalcategory", labels=indexer.labels)
 
-pipeline = Pipeline(stages=[indexer, tokenizer, hashingTF, idf, lr, labelConverter])
-model = pipeline.fit(fullData)
+    pipeline = Pipeline(stages=[indexer, tokenizer, hashingTF, idf, lr, labelConverter])
+    model = pipeline.fit(fullData)
 
-print("Done training classifier")
+    print("Done training classifier")
 
-#pred = model.transform(testData)
-#pl = pred.select("label", "prediction").rdd.cache()
-#metrics = MulticlassMetrics(pl)
-#metrics.fMeasure()
+    model.save("weights")
+
+    #pred = model.transform(testData)
+    #pl = pred.select("label", "prediction").rdd.cache()
+    #metrics = MulticlassMetrics(pl)
+    #metrics.fMeasure()
 
 #######################################
 # Gathering Data for Levenshtein Distance checking
@@ -620,8 +627,8 @@ parks_file = open("/home/jys308/parks.txt")
 parks_list = []
 
 for line in parks_file:
-    line = line.split()
-    parks_list.append(line[0])
+    #line = line.split()
+    parks_list.append(line[:-1])
 
 parks_df = spark.createDataFrame(list(map(lambda x: Row(parks=x), parks_list)))
 
