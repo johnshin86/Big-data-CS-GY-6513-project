@@ -667,7 +667,7 @@ for file in files[:10]:
     print("This is column number", files.index(file))
     #process dictionary to record to json
     with open(str(colName) +'.json', 'w') as fp:
-        json.dump(data, fp,default=datetime_handler)
+        json.dump(types, fp,default=datetime_handler)
 
 """
 
@@ -682,3 +682,4 @@ for file in files:
     types = semanticType(colName, df)
     with open('semantic_file_test.txt', 'w') as file:
         file.write(json.dumps(types))
+"""
