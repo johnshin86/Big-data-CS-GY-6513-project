@@ -662,9 +662,10 @@ for file in files[:10]:
     fileName = fileData[0]
     colName = fileData[1]
     df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-    colNamesList = [i.replace(".","").replace(" ","_") for i in df.columns] # . and space not supported in column name by pyspark
-    df = df.toDF(*colNamesList) #change name in DF
-    colName = colNamesList[0] #change colName we have
+    #colNamesList = [i.replace(".","").replace(" ","_") for i in df.columns] # . and space not supported in column name by pyspark
+    #df = df.toDF(*colNamesList) #change name in DF
+    #colName = colNamesList[0] #change colName we have
+    colName = colName.replace(".","").replace(" ", "_")
     types = semanticType(colName, df)
     print("Working on", colName)
     print("This is column number", files.index(file))
