@@ -598,8 +598,8 @@ typelocation_file = open("/home/jys308/typelocation.txt")
 typelocation_list = []
 
 for line in typelocation_file:
-    line = line.split()
-    typelocation_list.append(line[0])
+    line = line[3:-1]
+    typelocation_list.append(line)
 
 typelocation_df = spark.createDataFrame(list(map(lambda x: Row(typelocation=x), typelocation_list)))
 
