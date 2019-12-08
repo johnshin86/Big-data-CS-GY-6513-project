@@ -330,7 +330,7 @@ def semanticType(colName, df):
         # Parks
         ##############
         parks_columns = parks_df.columns
-        parks_crossjoin = df.crossJoin(park_df)
+        parks_crossjoin = df.crossJoin(parks_df)
         parks_levy = parks_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('parks')))
         park_counts = parks_levy.filter(parks_levy['word1_word2_levenshtein'] <= 2)
         if len(park_counts.take(1)) > 0:
