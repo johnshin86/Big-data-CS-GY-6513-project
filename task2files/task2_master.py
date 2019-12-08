@@ -93,6 +93,7 @@ def semanticType(colName, df):
 
 
     def REGEX(df):
+        print("computing Regex for:", colName)
         types = {}
         ########################
         # There are five types that we will find with regex
@@ -148,6 +149,7 @@ def semanticType(colName, df):
         return types
 
     def NAME(df):
+        print("computing names for:", colName)
         types = {}
         columns = df.columns
         #take column one and make predictions
@@ -175,6 +177,7 @@ def semanticType(colName, df):
         return types
 
     def LEVEN(df):
+        print("Computing Levenshtein for:", colName)
         types = {}
         df_columns = df.columns
         ###############
@@ -367,6 +370,8 @@ def semanticType(colName, df):
 # Train Classifier
 #################################
 
+print("Training Classifier...")
+
 address_df = getDataCustom('/user/jys308/Address_Point.csv')
 permit_df = getDataCustom('/user/jys308/Approved_Permits.csv')
 address_df.createOrReplaceTempView("address_df")
@@ -409,6 +414,8 @@ labelConverter = IndexToString(inputCol="prediction", outputCol="originalcategor
 pipeline = Pipeline(stages=[indexer, tokenizer, hashingTF, idf, lr, labelConverter])
 model = pipeline.fit(fullData)
 
+print("Done training classifier")
+
 #pred = model.transform(testData)
 #pl = pred.select("label", "prediction").rdd.cache()
 #metrics = MulticlassMetrics(pl)
@@ -435,6 +442,8 @@ model = pipeline.fit(fullData)
 14) Type of Location
 15) Parks/Playgrounds
 """
+print("Loading text files...")
+
 ###
 # Cities
 ###
@@ -631,6 +640,8 @@ building_code_df = spark.createDataFrame(list(map(lambda x: Row(building_codes=x
 
 ####
 
+print("Done Loading Text Files")
+
 
 
 #######################################
@@ -648,12 +659,14 @@ for file in files:
 
 """
 
-one_file = files[:1]
-for file in one_file:
+files = files[:1]
+for file in files:
     fileData = file.split(".")
     fileName = fileData[0]
     colName = fileData[1]
     df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
+    print("Working on", colName)
+    print("This is column number", files.index(file))
     types = semanticType(colName, df)
     with open('semantic_file_test.txt', 'w') as file:
         file.write(json.dumps(types))
