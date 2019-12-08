@@ -459,8 +459,8 @@ cities_file = open("/home/jys308/cities.txt")
 cities_list = []
 
 for line in cities_file:
-    line = line.split()
-    cities_list.append(line[0])
+    #line = line.split()
+    cities_list.append(line[:-1])
 
 cities_df = spark.createDataFrame(list(map(lambda x: Row(cities=x), cities_list)))
 
@@ -472,8 +472,8 @@ neighborhood_file = open("/home/jys308/neighborhood.txt")
 neighborhood_list = []
 
 for line in neighborhood_file:
-    line = line.split()
-    neighborhood_list.append(line[0])
+    #line = line.split()
+    neighborhood_list.append(line[:-1])
 
 neighborhood_df = spark.createDataFrame(list(map(lambda x: Row(neighborhood=x), neighborhood_list)))
 
@@ -485,8 +485,8 @@ borough_file = open("/home/jys308/boroughs.txt")
 borough_list = []
 
 for line in borough_file:
-    line = line.split()
-    borough_list.append(line[0])
+    #line = line.split()
+    borough_list.append(line[:-1])
 
 borough_df = spark.createDataFrame(list(map(lambda x: Row(borough=x), borough_list)))
 
@@ -498,8 +498,8 @@ schoolname_file = open("/home/jys308/schoolname.txt")
 schoolname_list = []
 
 for line in schoolname_file:
-    line = line.split()
-    schoolname_list.append(line[0])
+    #line = line.split()
+    schoolname_list.append(line[:-1])
 
 schoolname_df = spark.createDataFrame(list(map(lambda x: Row(schoolname=x), schoolname_list)))
 
@@ -511,8 +511,8 @@ color_file = open("/home/jys308/colors.txt")
 color_list = []
 
 for line in color_file:
-    line = line.split()
-    color_list.append(line[0])
+    #line = line.split()
+    color_list.append(line[:-1])
 
 color_df = spark.createDataFrame(list(map(lambda x: Row(color=x), color_list)))
 
@@ -524,8 +524,8 @@ carmake_file = open("/home/jys308/carmake.txt")
 carmake_list = []
 
 for line in carmake_file:
-    line = line.split()
-    carmake_list.append(line[0])
+    #line = line.split()
+    carmake_list.append(line[:-1])
 
 carmake_df = spark.createDataFrame(list(map(lambda x: Row(carmake=x), carmake_list)))
 
@@ -537,8 +537,8 @@ cityagency_file = open("/home/jys308/cityagency.txt")
 cityagency_list = []
 
 for line in cityagency_file:
-    line = line.split()
-    cityagency_list.append(line[0])
+    #line = line.split()
+    cityagency_list.append(line[:-1])
 
 cityagency_df = spark.createDataFrame(list(map(lambda x: Row(cityagency=x), cityagency_list)))
 
@@ -550,8 +550,8 @@ areastudy_file = open("/home/jys308/areastudy.txt")
 areastudy_list = []
 
 for line in areastudy_file:
-    line = line.split()
-    areastudy_list.append(line[0])
+    #line = line.split()
+    areastudy_list.append(line[:-1])
 
 areastudy_df = spark.createDataFrame(list(map(lambda x: Row(areastudy=x), areastudy_list)))
 
@@ -563,8 +563,8 @@ subjects_file = open("/home/jys308/subjects.txt")
 subjects_list = []
 
 for line in subjects_file:
-    line = line.split()
-    subjects_list.append(line[0])
+    #line = line.split()
+    subjects_list.append(line[:-1])
 
 subjects_df = spark.createDataFrame(list(map(lambda x: Row(subjects=x), subjects_list)))
 
@@ -576,8 +576,8 @@ schoollevels_file = open("/home/jys308/schoollevels.txt")
 schoollevels_list = []
 
 for line in schoollevels_file:
-    line = line.split()
-    schoollevels_list.append(line[0])
+    #line = line.split()
+    schoollevels_list.append(line[:-1])
 
 schoollevels_df = spark.createDataFrame(list(map(lambda x: Row(schoollevels=x), schoollevels_list)))
 
@@ -589,9 +589,9 @@ college_file = open("/home/jys308/college.txt", encoding="utf-8")
 college_list = []
 
 for line in college_file:
-    line = line.split(',')
-    if line[0] == 'US':
-        college_list.append(line[1])
+    #line = line.split(',')
+    #if line[0] == 'US':
+    college_list.append(line[:-1])
 
 college_df = spark.createDataFrame(list(map(lambda x: Row(college=x), college_list)))
 
@@ -603,8 +603,8 @@ vehicletype_file = open("/home/jys308/vehicletype.txt")
 vehicletype_list = []
 
 for line in vehicletype_file:
-    line = line.split()
-    vehicletype_list.append(line[0])
+    #line = line.split()
+    vehicletype_list.append(line[:-1])
 
 vehicletype_df = spark.createDataFrame(list(map(lambda x: Row(vehicletype=x), vehicletype_list)))
 
