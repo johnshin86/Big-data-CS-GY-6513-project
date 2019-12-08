@@ -473,7 +473,7 @@ neighborhood_df = spark.createDataFrame(list(map(lambda x: Row(neighborhood=x), 
 # Borough
 ###
 
-borough_file = open("/home/jys308/borough.txt")
+borough_file = open("/home/jys308/boroughs.txt")
 borough_list = []
 
 for line in borough_file:
@@ -499,7 +499,7 @@ schoolname_df = spark.createDataFrame(list(map(lambda x: Row(schoolname=x), scho
 # Color
 ###
 
-color_file = open("/home/jys308/color.txt")
+color_file = open("/home/jys308/colors.txt")
 color_list = []
 
 for line in color_file:
