@@ -237,7 +237,7 @@ def semanticType(colName, df):
         ###############
         carmake_columns = carmake_df.columns
         carmake_crossjoin = df.crossJoin(carmake_df)
-        carmake_levy = carmake_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]]), col('carmake')))
+        carmake_levy = carmake_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('carmake')))
         carmake_count =  carmake_levy.filter(carmake_levy["word1_word2_levenshtein"] <= 2)
         if len(carmake_count.take(1)) > 0:
             carmake_frequency = carmake_count.groupBy().sum().collect()[0][0]
