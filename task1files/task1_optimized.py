@@ -75,7 +75,7 @@ getLength_udf = udf(getLength,IntegerType())
 
 
 def getDateStats(rdd):
-	subset = rdd.filter(lambda x: x[1]=="DATE/TIME").map(lambda x: parser.parse(x[0]))
+	subset = rdd.filter(lambda x: x[1]=="DATE/TIME").map(lambda x: parser.parse(x[0]).replace(tzinfo=None))
 	if subset.isEmpty(): return 0, '', ''
 	count = subset.countApprox(timeout=10000)
 	return count, subset.max(), subset.min()
@@ -112,22 +112,8 @@ def datetime_handler(x):
 		return x.isoformat()
 	raise TypeError("Unknown type")
 
-#files = getFileList()
-files = ["/user/hm74/NYCOpenData/bm9v-cvch.tsv.gz",
-"/user/hm74/NYCOpenData/fuhs-xmg2.tsv.gz",
-"/user/hm74/NYCOpenData/mtt6-ywt4.tsv.gz",
-"/user/hm74/NYCOpenData/q5za-zqz7.tsv.gz",
-"/user/hm74/NYCOpenData/fxdy-q85h.tsv.gz",
-"/user/hm74/NYCOpenData/4tdt-h5f6.tsv.gz",
-"/user/hm74/NYCOpenData/eamj-ryxu.tsv.gz",
-"/user/hm74/NYCOpenData/8jfz-tjny.tsv.gz",
-"/user/hm74/NYCOpenData/f3cg-u8bv.tsv.gz",
-"/user/hm74/NYCOpenData/him9-7gri.tsv.gz",
-"/user/hm74/NYCOpenData/i5ef-jxv3.tsv.gz",
-"/user/hm74/NYCOpenData/de8q-estm.tsv.gz",
-"/user/hm74/NYCOpenData/xqea-6ihi.tsv.gz",
-"/user/hm74/NYCOpenData/g4zf-s85y.tsv.gz",
-"/user/hm74/NYCOpenData/phqd-xav8.tsv.gz"]
+
+files = getFileList()
 
 freqColItems = []
 freqId = 0
@@ -188,9 +174,9 @@ for file in files:
 			realStats = [i[0] for i in realStats]
 			textStats = getTextStats(colDf.filter(colDf["cast_type"]=="TEXT").select(column).withColumn("str_length",getLength_udf(colDf[column])))
 			#textStats = getTextStats(colDf.filter(colDf["cast_type"]=="TEXT").rdd)
-			#dateStats = getDateStats(colDf.filter(colDf["cast_type"]=="DATE/TIME").rdd)
-			dateStats = colDf.filter(colDf["cast_type"]=="DATE/TIME").select(column).summary("count","min","max").select(column).collect()
-			dateStats = [i[0] for i in dateStats ]
+			dateStats = getDateStats(colDf.filter(colDf["cast_type"]=="DATE/TIME").rdd)
+			#dateStats = colDf.filter(colDf["cast_type"]=="DATE/TIME").select(column).summary("count","min","max").select(column).collect()
+			#dateStats = [i[0] for i in dateStats ]
 			freqColItems.append((freqId,colDf.select("cast_type").distinct().collect()))
 			freqId += 1
 			#intStats = getIntStats(colRdd)
