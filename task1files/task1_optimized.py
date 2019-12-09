@@ -2,7 +2,6 @@ import os
 import gc
 import csv
 import json
-import string
 import pyspark
 from pyspark import SparkContext
 
@@ -25,11 +24,15 @@ spark = SparkSession \
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
+#spark.debug.maxToStringFields=500
+#spark.sql.debug.maxToStringFields = 500
+spark.conf.set("spark.debug.maxToStringFields", 10000)
+
 def getFileList():
 	op = os.popen("hdfs dfs -ls /user/hm74/NYCOpenData").read().split('\n')
 	files = []
 	for file in op:
-		if '.gz' in file:
+		if '.gz' in file or '.tsv' in file:
 			files.append(file.split()[-1])
 	return files
 
@@ -70,25 +73,24 @@ def getLength(x):
 
 getLength_udf = udf(getLength,IntegerType())
 
-def getIntStats(rdd):
-	subset = rdd.filter(lambda x:x[1] == "INTEGER").map(lambda x: int(x[0]))
-	if subset.isEmpty():
-		return 0, 0, 0, 0, 0
-	else:
-		count = subset.countApprox(timeout=10000)
-		return count, subset.max(), subset.min(), subset.mean(), subset.stdev()
-
-def getRealStats(rdd):
-	subset = rdd.filter(lambda x:x[1] == "REAL").map(lambda x:float(x[0]))
-	if subset.isEmpty():	return 0, 0, 0, 0, 0
-	count = subset.countApprox(timeout=10000)
-	return count, subset.max(), subset.min(), subset.mean(), subset.stdev()
 
 def getDateStats(rdd):
 	subset = rdd.filter(lambda x: x[1]=="DATE/TIME").map(lambda x: parser.parse(x[0]))
 	if subset.isEmpty(): return 0, '', ''
 	count = subset.countApprox(timeout=10000)
 	return count, subset.max(), subset.min()
+
+'''
+def getTextStats(rdd):
+	print("Getting Text stats....")
+	subset = rdd.filter(lambda x: x[1]=="TEXT").map(lambda x: (x[0],len(x[0])))
+	if subset.isEmpty():	return 0, [], [], 0 
+	count = subset.countApprox(timeout=10000)
+	longest = subset.takeOrdered(5, key = lambda x: -x[1])
+	shortest = subset.takeOrdered(5, key= lambda x: x[1])
+	avgLen = subset.map(lambda x: x[1]).mean()
+	return count, longest, shortest, avgLen
+'''
 
 def getTextStats(colDf):
 	#subset = rdd.filter(lambda x: x[1]=="TEXT").map(lambda x: (x[0],len(x[0])))
@@ -104,12 +106,28 @@ def getTextStats(colDf):
 	longest = colDf.orderBy(colDf["str_length"].desc()).take(5)
 	return count, longest, shortest, avgLen
 
+
 def datetime_handler(x):
 	if isinstance(x, datetime.datetime):
 		return x.isoformat()
 	raise TypeError("Unknown type")
 
-files = getFileList()
+#files = getFileList()
+files = ["/user/hm74/NYCOpenData/bm9v-cvch.tsv.gz",
+"/user/hm74/NYCOpenData/fuhs-xmg2.tsv.gz",
+"/user/hm74/NYCOpenData/mtt6-ywt4.tsv.gz",
+"/user/hm74/NYCOpenData/q5za-zqz7.tsv.gz",
+"/user/hm74/NYCOpenData/fxdy-q85h.tsv.gz",
+"/user/hm74/NYCOpenData/4tdt-h5f6.tsv.gz",
+"/user/hm74/NYCOpenData/eamj-ryxu.tsv.gz",
+"/user/hm74/NYCOpenData/8jfz-tjny.tsv.gz",
+"/user/hm74/NYCOpenData/f3cg-u8bv.tsv.gz",
+"/user/hm74/NYCOpenData/him9-7gri.tsv.gz",
+"/user/hm74/NYCOpenData/i5ef-jxv3.tsv.gz",
+"/user/hm74/NYCOpenData/de8q-estm.tsv.gz",
+"/user/hm74/NYCOpenData/xqea-6ihi.tsv.gz",
+"/user/hm74/NYCOpenData/g4zf-s85y.tsv.gz",
+"/user/hm74/NYCOpenData/phqd-xav8.tsv.gz"]
 
 freqColItems = []
 freqId = 0
@@ -119,25 +137,27 @@ for file in files:
 	data = {}
 	data["dataset_name"] = file
 	df = getData(file)
-	colNamesList = [i.translate(str.maketrans('', '', string.punctuation)).replace(" ","_") for i in df.columns]
+	colNamesList = [i.replace(".","").replace(" ","_") for i in df.columns]	# . and space not supported in column name by pyspark
 	df = df.toDF(*colNamesList)
 	rdd = df.rdd
-	# 1 & 2
-	emptyDf = df.select([count(when(col(c).contains('N/A')| col(c).contains('NA') | col(c).contains('NULL') | col(c).isNull(),c)).alias(c) for c in df.columns])
-	emptyCount = emptyDf.rdd.map(lambda row : row.asDict()).collect()[0]
 	rows = rdd.countApprox(timeout=8000)
 	del rdd
+	print(rows)
+	# 1 & 2
+	emptyDf = df.select([count(when(col(c).isNull(),c)).alias(c) for c in df.columns])
+	emptyCount = emptyDf.rdd.map(lambda row : row.asDict()).collect()[0]
 	nonEmptyCount = {}
 	for c in emptyDf.columns:
 		nonEmptyCount[c] = rows - emptyCount[c]
 	#3 & 4 & 5
+	#df = df.dropna()
 	mostFrequent = {}
 	distinct = {}
 	dataTypes = dict(df.dtypes)
 	colStats = {}
 	colListData = []
 	for column in df.columns:
-		#print(col)
+		print(column)
 		colData = {}
 		colData["column_name"] = column
 		colData["number_non_empty_cells"] = nonEmptyCount[column]
@@ -151,18 +171,24 @@ for file in files:
 		for item in tempFreq:
 			freqList.append(item[0])
 		colData["frequent_values"] = freqList
+		#print("Getting stats.....")
 		mostFrequent[column] = freqList
 		distinct[column] = distinctCount
 		if dataTypes[column] == "string":
 			#colRdd = df.select(column).dropna().rdd.map(lambda x: x[0])
 			#colRdd = colRdd.map(lambda x: (x,castAsType(x)))
-			colDf = df.select(column).withColumn("cast_type",castAsType_udf(df[column]))
+			colDf = df.select(column).withColumn("cast_type",castAsType_udf(df[column])).dropna()
+			#colDf.show(20, False)
+			#print("Getting int stats....")
 			intStats = colDf.filter(colDf["cast_type"]=="INTEGER").select(column).withColumn(column,colDf[column].cast(IntegerType())).describe().select(column).collect()
+			#print("we did it")
 			intStats = [i[0] for i in intStats]
+			#print("Getting real stats....")
 			realStats = colDf.filter(colDf["cast_type"]=="REAL").select(column).withColumn(column,colDf[column].cast(FloatType())).describe().select(column).collect()
 			realStats = [i[0] for i in realStats]
 			textStats = getTextStats(colDf.filter(colDf["cast_type"]=="TEXT").select(column).withColumn("str_length",getLength_udf(colDf[column])))
-			
+			#textStats = getTextStats(colDf.filter(colDf["cast_type"]=="TEXT").rdd)
+			#dateStats = getDateStats(colDf.filter(colDf["cast_type"]=="DATE/TIME").rdd)
 			dateStats = colDf.filter(colDf["cast_type"]=="DATE/TIME").select(column).summary("count","min","max").select(column).collect()
 			dateStats = [i[0] for i in dateStats ]
 			freqColItems.append((freqId,colDf.select("cast_type").distinct().collect()))
@@ -172,6 +198,7 @@ for file in files:
 			#dateStats = getDateStats(colRdd)
 			#textStats = getTextStats(colRdd)
 			colStats[column] = [intStats,realStats,dateStats,textStats]
+			colDf.unpersist()
 		elif dataTypes[column] in ["int","long","bigint"]:
 			#colRdd = df.select(column).dropna().rdd.map(lambda x: x[0])
 			#intStats = (nonEmptyCount[column], colRdd.max(), colRdd.min(), colRdd.mean(), colRdd.stdev())
@@ -187,8 +214,17 @@ for file in files:
 			dateStats = (0,0,0)
 			textStats = (0,0,0,0)
 			colStats[column] = [intStats,realStats,dateStats,textStats]
-		colDf.unpersist()
+		else:
+			#colRdd = df.select(column).dropna().rdd.map(lambda x: x[0])
+			intStats = (0,0,0,0,0)
+			realStats = (0,0,0,0,0)
+			dateStats = (0,0,0)
+			tempDf = df.select(column).dropna().withColumn(column,df[column].cast(StringType()))
+			textStats = getTextStats(tempDf.withColumn("str_length",getLength_udf(tempDf[column])))
+			colStats[column] = [intStats,realStats,dateStats,textStats]
+		#colDf.unpersist()
 		dataTypesValue = {}
+		#print("Writing values....")
 		for key in colStats.keys():
 			keyData = colStats[key]
 			#0 Int,1 real, 2 date, 3 text
