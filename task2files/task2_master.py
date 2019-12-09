@@ -19,7 +19,7 @@ from pyspark.sql.functions import isnan, when, count, col
 from pyspark.ml.linalg import Vectors
 from pyspark.sql.functions import col
 from pyspark.sql.functions import lit
-from pyspark.sql.functions import levenshtein  
+from pyspark.sql.functions import levenshtein
 
 from pyspark.sql import SQLContext
 
@@ -69,7 +69,7 @@ def semanticType(colName, df):
     7) Neighborhood LEVEN
     8) LAT/LON coordinates REGEX (DONE)
     9) Zip code REGEX (DONE)
-    10) Borough LEVEN 
+    10) Borough LEVEN
     11) School name (Abbreviations and full names) LEVEN
     12) Color LEVEN
     13) Car make LEVEN
@@ -103,7 +103,7 @@ def semanticType(colName, df):
         web_regex = r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
 
         zip_regex = r"11422 11422-7903 11598 11678787 11678-23 11723 11898-111 22222222-6666 14567-999999 11111-2222"
-        
+
         latlong_regex = r'([0-9.-]+).+?([0-9.-]+)'
 
         phone_regex = r'((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}'
@@ -159,7 +159,7 @@ def semanticType(colName, df):
         pred = model.transform(df.select('TEXT'))
         pred_categories = pred.select('TEXT', 'originalcategory')
         new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
-	
+
         street_name_df = new_df.filter(new_df['originalcategory'] == 'STREETNAME')
         human_df = new_df.filter(new_df['originalcategory'] == 'HUMANNAME')
         business_df = new_df.filter(new_df['originalcategory'] == 'BUSINESSNAME')
@@ -247,7 +247,7 @@ def semanticType(colName, df):
         if len(carmake_count.take(1)) > 0:
             carmake_frequency = carmake_count.groupBy().sum().collect()[0][0]
             types['carmake'] = carmake_frequency
-        
+
 
         ###############
         # City Agency
@@ -434,7 +434,7 @@ else:
 #######################################
 
 """
-1) City 
+1) City
 2) Neighborhood
 3) Borough
 4) School Name
@@ -681,7 +681,7 @@ for file in files_and_length:
     print("Working on", colName)
     print("This is column number", files.index(file))
     #process dictionary to record to json
-    with open(str(file[0]) +'.json', 'w') as fp:
+    with open(str(file) +'.json', 'w') as fp:
         json.dump(types, fp)
 
 
