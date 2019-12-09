@@ -74,7 +74,7 @@ writeCompToCsv(allComp,"complaintsAllYears.csv")
 #Yearly analysis
 dateDf = df.withColumn("Created Date",castAsDate_udf(df["Created Date"]))
 dateDf = dateDf.withColumn("Closed Date",castAsDate_udf(dateDf["Closed Date"]))
-dateDf.createOrReplaceTempView("dateDf")
+#dateDf.createOrReplaceTempView("dateDf")
 
 #YYYY-MM-DD
 dates = [("2010-01-01",  "2010-12-31"),("2011-01-01",  "2011-12-31"),("2012-01-01",  "2012-12-31"),("2013-01-01",  "2013-12-31"),
