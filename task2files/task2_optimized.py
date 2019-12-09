@@ -90,6 +90,19 @@ def semanticType(colName, df):
     output: dictionary with keys as semantic types and values as count
     """
 
+###############################################################################################
+# Non Double-Counting, Optimized work-flow.
+# Instead of passing the input df as two columns, we create a 
+# a third column with null values right off the bat. 
+# We will increase the probability theshold to label the name types to 90%.
+# Once a type is decided, the null value is replaced with the type. Once that is done, 
+# the type is decided FOR GOOD. Every new function will only look at currently null values in the df
+# and replace that value. We will place the expensive crossjoins LAST (colleges, parks), 
+# and hopefully by that time most of the types will have been figured out.
+# Instead of returning a dictionary of types, each function will fill the third column,
+# and at the end we will sum the types.
+################################################################################################
+
     types = {}
 
 
@@ -157,8 +170,9 @@ def semanticType(colName, df):
         #take column one and make predictions
         df = df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"))
         pred = model.transform(df.select('TEXT'))
-        pred_categories = pred.select('TEXT', 'originalcategory')
+        pred_categories = pred.select('TEXT', 'originalcategory') # add probability vector
         new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
+        # create new DF, filter only for high probability.
 
         street_name_df = new_df.filter(new_df['originalcategory'] == 'STREETNAME')
         human_df = new_df.filter(new_df['originalcategory'] == 'HUMANNAME')
