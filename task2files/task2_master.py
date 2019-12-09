@@ -681,7 +681,7 @@ for file in files_and_length:
     print("Working on", colName)
     print("This is column number", files.index(file))
     #process dictionary to record to json
-    with open(str(file) +'.json', 'w') as fp:
+    with open(str(file[0]) +'.json', 'w') as fp:
         json.dump(types, fp)
 
 
