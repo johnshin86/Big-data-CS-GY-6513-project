@@ -17,6 +17,16 @@ from pyspark.sql.functions import col
 from pyspark.sql.functions import unix_timestamp
 from pyspark.sql.functions import isnan, when, count, col
 
+
+sc = SparkContext()
+
+spark = SparkSession \
+		.builder \
+		.appName("Big data project") \
+		.config("spark.some.config.option", "some-value") \
+		.getOrCreate()
+
+
 def getData(file):
 	return spark.read.option("delimiter", ",").option("header","true").option("inferSchema","true").csv(file)
 
