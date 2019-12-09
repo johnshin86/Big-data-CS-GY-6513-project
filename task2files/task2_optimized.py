@@ -344,7 +344,7 @@ def semanticType(colName, df):
         building_columns = building_code_df.columns
         building_crossjoin = df.crossJoin(building_code_df)
         building_code_levy = building_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('building_codes')))
-        building_counts = building_code_levy.filter(building_code_levy['word1_word2_levenshtein'] <= 1)
+        building_counts = building_code_levy.filter(building_code_levy['word1_word2_levenshtein'] = 0)
         if len(building_counts.take(1)) > 0:
             building_code_frequency = building_counts.groupBy().sum().collect()[0][0]
             types['building_code'] = building_code_frequency
