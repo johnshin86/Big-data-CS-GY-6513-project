@@ -248,8 +248,8 @@ else:
     model = pipeline.fit(fullData)
 
     print("Done training classifier")
-    #model.save("weights")
-    model.save("/home/jys308/weights")
+    model.save("weights")
+    #model.save("/home/jys308/weights")
 
     #pred = model.transform(testData)
     #pl = pred.select("label", "prediction").rdd.cache()
@@ -477,9 +477,9 @@ files_and_length.sort(key = lambda x: x[1])
 #index 25 is subjects
 #index 55 is neighborhoods
 
-index = 55
+#index = 55
 
-for file in files_and_length[index:index+1]:
+for file in files_and_length:
     print("This is the index of sorted list", files_and_length.index(file))
     file = file[0]
     fileData = file.split(".")
