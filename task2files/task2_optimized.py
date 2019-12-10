@@ -63,150 +63,84 @@ files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 # Main semantic type function
 ########################################
 
+def REGEX(df):
+    print("computing Regex for:", colName)
+    web_regex = r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
+    zip_regex = r"11422 11422-7903 11598 11678787 11678-23 11723 11898-111 22222222-6666 14567-999999 11111-2222"
+    latlong_regex = r'([0-9.-]+).+?([0-9.-]+)'
+    phone_regex = r'((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}'
+
+    #could improve the address regex
+    address_regex = r'^\d+\s[A-z]+\s[A-z]+'
+    
+    columns = df.columns
+
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(web_regex), "WEBSITE").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(zip_regex), "ZIPCODE").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(latlong_regex), "LATLONG").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(phone_regex), "PHONENUMBER").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(address_regex), "ADDRESS").otherwise(df["true_type"]))
+    return df
+
+def NAME(df):
+    print("computing names for:", colName)
+    columns = df.columns
+    #take column one and make predictions
+    df = df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"), col("true_type"))
+    pred = model.transform(df.select('TEXT'))
+    pred_categories = pred.select('TEXT', 'originalcategory', 'probability') # add probability vector
+    new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
+    # create new DF, filter only for high probability.
+    new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
+    #new_df.select("probability").map(lambda x: x.toArray().max())
+    new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.95,     
+    new_df["originalcategory"]).otherwise(new_df["true_type"]))
+    df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
+    return df
+
+def leven_helper(df, ref_df):
+    df_columns = df.columns
+    # grab the non typed entries in the input df
+    new_df = df.filter(df["true_type"].isNull())
+    
+    ref_columns = ref_df.columns
+    crossjoin_df = new_df.crossJoin(ref_df)
+    levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col(ref_columns[0])))
+    count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= 2)
+
+    count_columns = count_df.columns
+    count_df = count_df.select(col(count_columns[0]).alias("text_field"), col(count_columns[1]).alias("freq_field"), col(count_columns[2]))
+    count_columns = count_df.columns
+
+    df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'left') #join with low lev distance rows
+    df = df.withColumn("true_type", when(df["word1_word2_levenshtein"].isNotNull(), "CITY").otherwise(df["true_type"]))
+    df = df.drop("text_field").drop("freq_field").drop("word1_word2_levenshtein")
+    return df
+
+def LEVEN(df):
+    print("Computing Levenshtein for:", colName)
+    df = leven_helper(df, cities_df)
+    df = leven_helper(df, neighborhood_df)     
+    df = leven_helper(df, borough_df)
+    df = leven_helper(df, schoolname_df)
+    df = leven_helper(df, color_df)
+    df = leven_helper(df, carmake_df)
+    df = leven_helper(df, cityagency_df)
+    df = leven_helper(df, areastudy_df)
+    df = leven_helper(df, subjects_df)
+    df = leven_helper(df, schoollevels_df)
+    df = leven_helper(df, college_df)
+    df = leven_helper(df, vehicletype_df)
+    df = leven_helper(df, typelocation_df)
+    df = leven_helper(df, parks_df)
+    df = leven_helper(df, building_code_df)
+    return df
+
+
 def semanticType(colName, df):
-    """
-    The semantic types:
-    1) Person name (Last name, First name, Middle name, Full name) NAME (DONE)
-    2) Business name NAME (DONE)
-    3) Phone Number REGEX (DONE)
-    4) Address REGEX (DONE)
-    5) Street name NAME (DONE)
-    6) City LEVEN
-    7) Neighborhood LEVEN
-    8) LAT/LON coordinates REGEX (DONE)
-    9) Zip code REGEX (DONE)
-    10) Borough LEVEN
-    11) School name (Abbreviations and full names) LEVEN
-    12) Color LEVEN
-    13) Car make LEVEN
-    14) City agency (Abbreviations and full names) LEVEN
-    15) Areas of study (e.g., Architecture, Animal Science, Communications) LEVEN
-    16) Subjects in school (e.g., MATH A, MATH B, US HISTORY) LEVEN
-    17) School Levels (K-2, ELEMENTARY, ELEMENTARY SCHOOL, MIDDLE) LEVEN
-    18) College/University names LEVEN
-    19) Websites (e.g., ASESCHOLARS.ORG) REGEX (DONE)
-    20) Building Classification (e.g., R0-CONDOMINIUM, R2-WALK-UP) LEVEN
-    21) Vehicle Type (e.g., AMBULANCE, VAN, TAXI, BUS) LEVEN
-    22) Type of location (e.g., ABANDONED BUILDING, AIRPORT TERMINAL, BANK, CHURCH, CLOTHING/BOUTIQUE) LEVEN
-    23) Parks/Playgrounds (e.g., CLOVE LAKES PARK, GREENE PLAYGROUND) LEVEN
-
-    We will check the column name and it's levenshtein distance with the list of semantic types. We will call the    function for that semantic type.
-
-    input: df with 2 columns. 1st column is the data and 2nd is the count
-    output: dictionary with keys as semantic types and values as count
-    """
-
-###############################################################################################
-# Non Double-Counting, Optimized work-flow.
-# Instead of passing the input df as two columns, we create a 
-# a third column with null values right off the bat. 
-# We will increase the probability theshold to label the name types to 90%.
-# Once a type is decided, the null value is replaced with the type. Once that is done, 
-# the type is decided FOR GOOD. Every new function will only look at currently null values in the df
-# and replace that value. We will place the expensive crossjoins LAST (colleges, parks), 
-# and hopefully by that time most of the types will have been figured out.
-# Instead of returning a dictionary of types, each function will fill the third column,
-# and at the end we will sum the types.
-################################################################################################
-
-    types = {}
-
-
-
-    def REGEX(df):
-        print("computing Regex for:", colName)
-        ########################
-        # There are five types that we will find with regex
-        ########################
-        web_regex = r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
-
-        zip_regex = r"11422 11422-7903 11598 11678787 11678-23 11723 11898-111 22222222-6666 14567-999999 11111-2222"
-
-        latlong_regex = r'([0-9.-]+).+?([0-9.-]+)'
-
-        phone_regex = r'((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}'
-
-        #could improve the address regex
-
-        address_regex = r'^\d+\s[A-z]+\s[A-z]+'
-
-        columns = df.columns
-
-        # df now has 3 columns, field, frequency, and true type. 
-
-        df = df.withColumn("true_type", when(df[columns[0]].rlike(web_regex), "WEBSITE").otherwise(df["true_type"]))
-        df = df.withColumn("true_type", when(df[columns[0]].rlike(zip_regex), "ZIPCODE").otherwise(df["true_type"]))
-        df = df.withColumn("true_type", when(df[columns[0]].rlike(latlong_regex), "LATLONG").otherwise(df["true_type"]))
-        df = df.withColumn("true_type", when(df[columns[0]].rlike(phone_regex), "PHONENUMBER").otherwise(df["true_type"]))
-        df = df.withColumn("true_type", when(df[columns[0]].rlike(address_regex), "ADDRESS").otherwise(df["true_type"]))
-        return df
-
-    def NAME(df):
-        print("computing names for:", colName)
-
-
-        columns = df.columns
-        #take column one and make predictions
-        df = df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"), col("true_type"))
-        pred = model.transform(df.select('TEXT'))
-        pred_categories = pred.select('TEXT', 'originalcategory', 'probability') # add probability vector
-        new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
-        # create new DF, filter only for high probability.
-        new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
-        #new_df.select("probability").map(lambda x: x.toArray().max())
-
-        new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.95, new_df["originalcategory"]).otherwise(new_df["true_type"]))
-
-        df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
-
-        return df
-
-    def leven_helper(df, ref_df):
-        df_columns = df.columns
-
-        # grab the non typed entries in the input df
-        new_df = df.filter(df["true_type"].isNull())
-
-        ref_columns = ref_df.columns
-        crossjoin_df = new_df.crossJoin(ref_df)
-        levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col(ref_columns[0])))
-        count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= 2)
-
-        count_columns = count_df.columns
-        count_df = count_df.select(col(count_columns[0]).alias("text_field"), col(count_columns[1]).alias("freq_field"), col(count_columns[2]))
-        count_columns = count_df.columns
-
-        df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'left') #join with low lev distance rows
-        df = df.withColumn("true_type", when(df["word1_word2_levenshtein"].isNotNull(), "CITY").otherwise(df["true_type"]))
-        df = df.drop("text_field").drop("freq_field").drop("word1_word2_levenshtein")
-        return df
-
-
-    def LEVEN(df):
-        print("Computing Levenshtein for:", colName)
-        df = leven_helper(df, cities_df)
-        df = leven_helper(df, neighborhood_df)     
-        df = leven_helper(df, borough_df)
-        df = leven_helper(df, schoolname_df)
-        df = leven_helper(df, color_df)
-        df = leven_helper(df, carmake_df)
-        df = leven_helper(df, cityagency_df)
-        df = leven_helper(df, areastudy_df)
-        df = leven_helper(df, subjects_df)
-        df = leven_helper(df, schoollevels_df)
-        df = leven_helper(df, college_df)
-        df = leven_helper(df, vehicletype_df)
-        df = leven_helper(df, typelocation_df)
-        df = leven_helper(df, parks_df)
-        df = leven_helper(df, building_code_df)
-        return df
-
     df = NAME(df)
-
     df = REGEX(df)
-
     df = LEVEN(df)
-
     return df
 
 #################################
@@ -274,23 +208,6 @@ else:
 # Gathering Data for Levenshtein Distance checking
 #######################################
 
-"""
-1) City
-2) Neighborhood
-3) Borough
-4) School Name
-5) Color
-6) Car Make
-7) City Agency
-8) Areas of Study
-9) Subjects in School
-10) School levels.
-11) College Universities
-12) Building Classification (DONE)
-13) Vehicle Type
-14) Type of Location
-15) Parks/Playgrounds
-"""
 print("Loading text files...")
 
 ###
@@ -491,8 +408,6 @@ building_code_df = spark.createDataFrame(list(map(lambda x: Row(building_codes=x
 
 print("Done Loading Text Files")
 
-
-
 #######################################
 # Iterate through all columns
 #######################################
@@ -507,7 +422,7 @@ for (i,j) in zip(files, length):
 files_and_length.sort(key = lambda x: x[1])
 
 
-for file in files_and_length:
+for file in files_and_length[:10]:
     print("This is the index of current column in sorted list::", files_and_length.index(file))
     file = file[0]
     fileData = file.split(".")
@@ -524,7 +439,12 @@ for file in files_and_length:
     ##
     df = df.withColumn('true_type', lit(None))
 
-    types = semanticType(colName, df)
+    df = semanticType(colName, df)
+
+    df_columns = df.columns    
+
+    dictionary_df = df.groupBy("true_type").collect()
+
     print("Working on", colName)
     print("This is column number", files.index(file))
     #process dictionary to record to json
