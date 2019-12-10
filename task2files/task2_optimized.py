@@ -11,7 +11,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StringType, FloatType
 from pyspark.sql.types import DoubleType
 from pyspark.sql import functions as F
-from pyspark.sql.functions import udf
+from pyspark.sql.functions import udf, lower
 from pyspark.sql import Row
 
 from pyspark.sql.functions import isnan, when, count, col
@@ -106,7 +106,7 @@ def leven_helper(df, ref_df, cut_off, type_str):
     crossjoin_df = new_df.crossJoin(ref_df)
     #compute levy distance
     levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",\
-        levenshtein(col(df_columns[0]), col(ref_columns[0])))
+        levenshtein(lower(col(df_columns[0])), lower(col(ref_columns[0]))))
     #collect rows that were less than cutoff
     count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= cut_off)
     count_columns = count_df.columns
@@ -116,16 +116,16 @@ def leven_helper(df, ref_df, cut_off, type_str):
         col(count_columns[1]).alias("min"))
     count_columns = count_df.columns
     df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
-    #df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
     df = df.withColumn("true_type", when(df["min"]\
             .isNotNull(), type_str).otherwise(df["true_type"]))
     df = df.drop("text_field").drop("min")
+    #
     new_df.unpersist()
     crossjoin_df.unpersist()
     levy_df.unpersist()
     count_df.unpersist()
     df.show()
-    print("size of df",df.count())
+    #print("size of df",df.count())
     return df
 
 def LEVEN(df):
@@ -433,8 +433,10 @@ for (i,j) in zip(files, length):
 files_and_length.sort(key = lambda x: x[1])
 
 #index 5 is school levels
+#index 25 is subjects
+#index 55 is neighborhoods
 
-index = 25
+index = 55
 
 for file in files_and_length[index:index+1]:
     print("This is the index of sorted list", files_and_length.index(file))
