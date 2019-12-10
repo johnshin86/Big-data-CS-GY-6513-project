@@ -93,13 +93,13 @@ def NAME(df):
     #new_df.select("probability").map(lambda x: x.toArray().max())
     new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.80) & \
             (new_df["true_type"].isNull()), new_df["originalcategory"]).otherwise(new_df["true_type"]))
-    df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
-    return df
+    rdf = new_df.drop("originalcategory").drop("probability").drop("max_probability")
+    return rdf
+
 
 """
-
 def leven_helper(df, ref_df, cut_off, type_str):
-    print("size of reference_df",ref_df.count())
+    #print("size of reference_df",ref_df.count())
     df_columns = df.columns
     # grab the non typed entries in the input df
     new_df = df.filter(df["true_type"].isNull())
@@ -117,20 +117,24 @@ def leven_helper(df, ref_df, cut_off, type_str):
     count_df = count_df.select(col(count_columns[0]).alias("text_field"), \
         col(count_columns[1]).alias("min"))
     count_columns = count_df.columns
-    df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
-    df = df.withColumn("true_type", when(df["min"]\
-            .isNotNull(), type_str).otherwise(df["true_type"]))
-    df = df.drop("text_field").drop("min")
-    #
-    new_df.unpersist()
-    crossjoin_df.unpersist()
-    levy_df.unpersist()
-    count_df.unpersist()
-    df.show()
-    return df
+    #df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
+    #df = df.withColumn("true_type", when(df["min"]\
+    #        .isNotNull(), type_str).otherwise(df["true_type"]))
+    #df = df.drop("text_field").drop("min")
+    rdf = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
+    rdf = rdf.withColumn("true_type", when(rdf["min"]\
+            .isNotNull(), type_str).otherwise(rdf["true_type"]))
+    rdf = rdf.drop("text_field").drop("min")
+    #new_df.unpersist()
+    #crossjoin_df.unpersist()
+    #levy_df.unpersist()
+    #count_df.unpersist()
+    #df.show()
+    return rdf
 """
+
 def leven_helper(df, ref_df, cut_off, type_str):
-    print("size of reference_df",ref_df.count())
+    #print("size of reference_df",ref_df.count())
     df_columns = df.columns
     # grab the non typed entries in the input df
     new_df = df.filter(df["true_type"].isNull())
@@ -145,42 +149,44 @@ def leven_helper(df, ref_df, cut_off, type_str):
     levy_columns = levy_df.columns
     levy_df = levy_df.groupBy(levy_columns[0]).min("word1_word2_levenshtein")
     levy_columns = levy_df.columns
-    levy_df = levy_df.select(col(levy_columns[0]).alias("text_field"), \
+    levy_df = levy_df.select(col(levy_columns[0]), \
         col(levy_columns[1]).alias("min"))
     levy_columns = levy_df.columns
-    
-    df.filter()
-
+    levy_df = levy_df.drop("min")
+    df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), "neighborhood").otherwise(df["true_type"]))
+    levy_df = levy_df.collect()
+    levy_df = [x[0] for x in levy_df]
+    rdf = df.withColumn("true_type", when(df[df_columns[0]].isin(levy_df), "neighborhood").otherwise(df["true_type"]))
     #df = df.join(levy_df, df[df_columns[0]] == levy_df[levy_columns[0]], 'leftouter')
     #df = df.withColumn("true_type", when(df["min"]\
     #        .isNotNull(), type_str).otherwise(df["true_type"]))
     #df = df.drop("text_field").drop("min")
-    #
-    new_df.unpersist()
+    #new_df.unpersist()
     #crossjoin_df.unpersist()
-    levy_df.unpersist()
+    #levy_df.unpersist()
     #count_df.unpersist()
-    df.show()
-    return df
+    #df.show()
+    return rdf
+
 
 def LEVEN(df):
     print("Computing Levenshtein for:", colName)
-    df = leven_helper(df, cities_df, 2, "city")
-    df = leven_helper(df, neighborhood_df, 2, "neighborhood")
-    df = leven_helper(df, borough_df, 2, "borough")
-    df = leven_helper(df, schoolname_df, 2, "school_name")
-    df = leven_helper(df, color_df, 2, "color")
-    df = leven_helper(df, carmake_df, 2, "car_make")
-    df = leven_helper(df, cityagency_df, 2, "city_agency")
-    df = leven_helper(df, areastudy_df, 2, "area_of_study")
-    df = leven_helper(df, subjects_df, 2, "subject_in_school")
-    df = leven_helper(df, schoollevels_df, 1, "school_level")
-    df = leven_helper(df, college_df, 2, "college_name")
-    df = leven_helper(df, vehicletype_df, 3, "vehicle_type")
-    df = leven_helper(df, typelocation_df, 5, "location_type")
-    df = leven_helper(df, parks_df, 5, "park_playground")
-    df = leven_helper(df, building_code_df, 0, "building_classification")
-    return df
+    df1 = leven_helper(df, cities_df, 3, "city")
+    df2 = leven_helper(df1, neighborhood_df, 4, "neighborhood")
+    df3 = leven_helper(df2, borough_df, 0, "borough")
+    df4 = leven_helper(df3, schoolname_df, 5, "school_name")
+    df5 = leven_helper(df4, color_df, 2, "color")
+    df6 = leven_helper(df5, carmake_df, 2, "car_make")
+    df7 = leven_helper(df6, cityagency_df, 3, "city_agency")
+    df8 = leven_helper(df7, areastudy_df, 5, "area_of_study")
+    df9 = leven_helper(df8, subjects_df, 2, "subject_in_school")
+    df10 = leven_helper(df9, schoollevels_df, 1, "school_level")
+    df11 = leven_helper(df10, college_df, 3, "college_name")
+    df12 = leven_helper(df11, vehicletype_df, 3, "vehicle_type")
+    df13 = leven_helper(df12, typelocation_df, 5, "location_type")
+    df14 = leven_helper(df13, parks_df, 5, "park_playground")
+    df15 = leven_helper(df14, building_code_df, 0, "building_classification")
+    return df15
 
 
 def semanticType(colName, df):
