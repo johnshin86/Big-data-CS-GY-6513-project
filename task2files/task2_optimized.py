@@ -59,22 +59,20 @@ max_vector_udf = udf(max_vector, FloatType())
 
 files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 
+web_regex = r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
+zip_regex = r"11422 11422-7903 11598 11678787 11678-23 11723 11898-111 22222222-6666 14567-999999 11111-2222"
+latlong_regex = r'([0-9.-]+).+?([0-9.-]+)'
+phone_regex = r'((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}'
+address_regex = r'^\d+\s[A-z]+\s[A-z]+'
+
 ########################################
 # Main semantic type function
 ########################################
 
 def REGEX(df):
     print("computing Regex for:", colName)
-    web_regex = r"(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
-    zip_regex = r"11422 11422-7903 11598 11678787 11678-23 11723 11898-111 22222222-6666 14567-999999 11111-2222"
-    latlong_regex = r'([0-9.-]+).+?([0-9.-]+)'
-    phone_regex = r'((\(\d{3}\) ?)|(\d{3}-))?\d{3}-\d{4}'
-
     #could improve the address regex
-    address_regex = r'^\d+\s[A-z]+\s[A-z]+'
-
     columns = df.columns
-
     df = df.withColumn("true_type", when(df[columns[0]].rlike(web_regex), "WEBSITE").otherwise(df["true_type"]))
     df = df.withColumn("true_type", when(df[columns[0]].rlike(zip_regex), "ZIPCODE").otherwise(df["true_type"]))
     df = df.withColumn("true_type", when(df[columns[0]].rlike(latlong_regex), "LATLONG").otherwise(df["true_type"]))
@@ -93,12 +91,13 @@ def NAME(df):
     # create new DF, filter only for high probability.
     new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
     #new_df.select("probability").map(lambda x: x.toArray().max())
-    new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.80,
-    new_df["originalcategory"]).otherwise(new_df["true_type"]))
+    new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.80) & \
+            (new_df["true_type"].isNotNull()), new_df["originalcategory"]).otherwise(new_df["true_type"]))
     df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return df
 
 def leven_helper(df, ref_df, cut_off, type_str):
+    print("size of reference_df",ref_df.count())
     df_columns = df.columns
     # grab the non typed entries in the input df
     new_df = df.filter(df["true_type"].isNull())
@@ -106,17 +105,27 @@ def leven_helper(df, ref_df, cut_off, type_str):
     ref_columns = ref_df.columns
     crossjoin_df = new_df.crossJoin(ref_df)
     #compute levy distance
-    levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col(ref_columns[0])))
+    levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",\
+        levenshtein(col(df_columns[0]), col(ref_columns[0])))
     #collect rows that were less than cutoff
     count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= cut_off)
-
     count_columns = count_df.columns
-    count_df = count_df.select(col(count_columns[0]).alias("text_field"), col(count_columns[1]).alias("freq_field"), col(count_columns[2]).alias("type_field"))
+    count_df = count_df.groupBy(count_columns[0]).min("word1_word2_levenshtein")
     count_columns = count_df.columns
-
-    df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'left') #join with low lev distance rows
-    df = df.withColumn("true_type", when(df["type_field"].isNotNull(), type_str).otherwise(df["true_type"]))
-    df = df.drop("text_field").drop("freq_field").drop("type_field")
+    count_df = count_df.select(col(count_columns[0]).alias("text_field"), \
+        col(count_columns[1]).alias("min"))
+    count_columns = count_df.columns
+    df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
+    #df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
+    df = df.withColumn("true_type", when(df["min"]\
+            .isNotNull(), type_str).otherwise(df["true_type"]))
+    df = df.drop("text_field").drop("min")
+    new_df.unpersist()
+    crossjoin_df.unpersist()
+    levy_df.unpersist()
+    count_df.unpersist()
+    df.show()
+    print("size of df",df.count())
     return df
 
 def LEVEN(df):
@@ -140,9 +149,9 @@ def LEVEN(df):
 
 
 def semanticType(colName, df):
-    df = NAME(df)
     df = REGEX(df)
     df = LEVEN(df)
+    df = NAME(df)
     return df
 
 #################################
@@ -423,28 +432,25 @@ for (i,j) in zip(files, length):
 
 files_and_length.sort(key = lambda x: x[1])
 
+#index 5 is school levels
 
-for file in files_and_length[:10]:
-    print("This is the index of current column in sorted list::", files_and_length.index(file))
+index = 25
+
+for file in files_and_length[index:index+1]:
+    print("This is the index of sorted list", files_and_length.index(file))
     file = file[0]
     fileData = file.split(".")
     fileName = fileData[0]
     colName = fileData[1]
-    df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-    colNamesList = [i.replace(".","").replace(" ","_") for i in df.columns] # . and space not supported in column name by pyspark
+    df = spark.read.option("delimiter", "\\t").option("header","true") \
+        .option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
+    colNamesList = [i.replace(".","").replace(" ","_") for i in df.columns]
     df = df.toDF(*colNamesList) #change name in DF
     #colName = colNamesList[0] #change colName we have
     colName = colName.replace(".","").replace(" ", "_")
-
-    ###
-    # Add third column to df with null types, will amend as we go along.
-    ##
     df = df.withColumn('true_type', lit(None))
-
     df = semanticType(colName, df)
-
     df_columns = df.columns
-
     dictionary_df = df.groupBy("true_type").sum().collect()
 
     #print("Working on", colName)
