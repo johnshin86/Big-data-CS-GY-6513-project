@@ -8,7 +8,7 @@ import json
 from dateutil import parser
 
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StringType, FloatType
 from pyspark.sql.types import DoubleType
 from pyspark.sql import functions as F
 from pyspark.sql.functions import udf
@@ -16,7 +16,7 @@ from pyspark.sql import Row
 
 from pyspark.sql.functions import isnan, when, count, col
 
-from pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.sql.functions import col
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import levenshtein
@@ -50,6 +50,12 @@ def getDataCustom(file):
 
 with open("/home/jys308/cluster1.txt","r") as f:
     content = f.readlines()
+
+def max_vector(vector):
+    max_val = float(max(vector))                 
+    return max_val
+
+max_vector_udf = udf(max_vector, FloatType())
 
 files = content[0].strip("[]").replace("'","").replace(" ","").split(",")
 
@@ -109,7 +115,6 @@ def semanticType(colName, df):
 
     def REGEX(df):
         print("computing Regex for:", colName)
-        types = {}
         ########################
         # There are five types that we will find with regex
         ########################
@@ -127,260 +132,82 @@ def semanticType(colName, df):
 
         columns = df.columns
 
-        df_web = df.filter(df[columns[0]].rlike(web_regex))
-        df_zip = df.filter(df[columns[0]].rlike(zip_regex))
-        df_latlong =  df.filter(df[columns[0]].rlike(latlong_regex))
-        df_phone =  df.filter(df[columns[0]].rlike(phone_regex))
-        df_address =  df.filter(df[columns[0]].rlike(address_regex))
+        # df now has 3 columns, field, frequency, and true type. 
 
-	#Get rows from df_web, which will be webaddress, and sum the second column
-	#to get the semantic type WEBSITE.
-        #only sum and add type if it exists
-
-        if len(df_web.take(1)) > 0:
-	    #not sure which is faster
-            web_frequency = df_web.groupBy().sum().collect()[0][0]
-            types['web'] = web_frequency
-            #web_frequency = df_web.rdd.map(lambda x: (1,x[1])).reduceByKey(lambda x,y: x + y).collect()[0][1]
-
-
-        if len(df_zip.take(1)) > 0:
-            zip_frequency = df_zip.groupBy().sum().collect()[0][0]
-            types['zip'] = zip_frequency
-
-        if len(df_latlong.take(1)) > 0:
-            latlong_frequency = df_latlong.groupBy().sum().collect()[0][0]
-            types['latlong'] = latlong_frequency
-
-        if len(df_phone.take(1)) > 0:
-            phone_frequency = df_phone.groupBy().sum().collect()[0][0]
-            types['phone'] = phone_frequency
-
-        if len(df_address.take(1)) > 0:
-            address_frequency = df_address.groupBy().sum().collect()[0][0]
-            types['address'] = address_frequency
-
-
-        return types
+        df = df.withColumn("true_type", when(df[columns[0]].rlike(web_regex), "WEBSITE").otherwise(df["true_type"]))
+        df = df.withColumn("true_type", when(df[columns[0]].rlike(zip_regex), "ZIPCODE").otherwise(df["true_type"]))
+        df = df.withColumn("true_type", when(df[columns[0]].rlike(latlong_regex), "LATLONG").otherwise(df["true_type"]))
+        df = df.withColumn("true_type", when(df[columns[0]].rlike(phone_regex), "PHONENUMBER").otherwise(df["true_type"]))
+        df = df.withColumn("true_type", when(df[columns[0]].rlike(address_regex), "ADDRESS").otherwise(df["true_type"]))
+        return df
 
     def NAME(df):
         print("computing names for:", colName)
-        types = {}
+
+
         columns = df.columns
         #take column one and make predictions
-        df = df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"))
+        df = df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"), col("true_type"))
         pred = model.transform(df.select('TEXT'))
-        pred_categories = pred.select('TEXT', 'originalcategory') # add probability vector
+        pred_categories = pred.select('TEXT', 'originalcategory', 'probability') # add probability vector
         new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
         # create new DF, filter only for high probability.
+        new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
+        #new_df.select("probability").map(lambda x: x.toArray().max())
 
-        street_name_df = new_df.filter(new_df['originalcategory'] == 'STREETNAME')
-        human_df = new_df.filter(new_df['originalcategory'] == 'HUMANNAME')
-        business_df = new_df.filter(new_df['originalcategory'] == 'BUSINESSNAME')
+        new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.95, new_df["originalcategory"]).otherwise(new_df["true_type"]))
 
-        if len(street_name_df.take(1)) > 0:
-            stname_frequency = street_name_df.groupBy().sum().collect()[0][0]
-            types['stname'] = stname_frequency
+        df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
 
-        if len(human_df.take(1)) > 0:
-            human_frequency = human_df.groupBy().sum().collect()[0][0]
-            types['humanname'] = human_frequency
+        return df
 
-        if len(business_df.take(1)) > 0:
-            business_frequency = business_df.groupBy().sum().collect()[0][0]
-            types['businessname'] = business_frequency
+    def leven_helper(df, ref_df):
+        df_columns = df.columns
 
-        return types
+        # grab the non typed entries in the input df
+        new_df = df.filter(df["true_type"].isNull())
+
+        ref_columns = ref_df.columns
+        crossjoin_df = new_df.crossJoin(ref_df)
+        levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col(ref_columns[0])))
+        count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= 2)
+
+        count_columns = count_df.columns
+        count_df = count_df.select(col(count_columns[0]).alias("text_field"), col(count_columns[1]).alias("freq_field"), col(count_columns[2]))
+        count_columns = count_df.columns
+
+        df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'left') #join with low lev distance rows
+        df = df.withColumn("true_type", when(df["word1_word2_levenshtein"].isNotNull(), "CITY").otherwise(df["true_type"]))
+        df = df.drop("text_field").drop("freq_field").drop("word1_word2_levenshtein")
+        return df
+
 
     def LEVEN(df):
         print("Computing Levenshtein for:", colName)
-        types = {}
-        df_columns = df.columns
-        ###############
-        # Cities
-        ###############
-        cities_columns = cities_df.columns
-        cities_crossjoin = df.crossJoin(cities_df)
-        cities_levy = cities_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('cities')))
-        cities_count =  cities_levy.filter(cities_levy["word1_word2_levenshtein"] <= 2)
-        if len(cities_count.take(1)) > 0:
-            cities_frequency = cities_count.groupBy().sum().collect()[0][0]
-            types['cities'] = cities_frequency
+        df = leven_helper(df, cities_df)
+        df = leven_helper(df, neighborhood_df)     
+        df = leven_helper(df, borough_df)
+        df = leven_helper(df, schoolname_df)
+        df = leven_helper(df, color_df)
+        df = leven_helper(df, carmake_df)
+        df = leven_helper(df, cityagency_df)
+        df = leven_helper(df, areastudy_df)
+        df = leven_helper(df, subjects_df)
+        df = leven_helper(df, schoollevels_df)
+        df = leven_helper(df, college_df)
+        df = leven_helper(df, vehicletype_df)
+        df = leven_helper(df, typelocation_df)
+        df = leven_helper(df, parks_df)
+        df = leven_helper(df, building_code_df)
+        return df
 
-        ###############
-        # Neighborhoods
-        ###############
-        neighborhood_columns = neighborhood_df.columns
-        neighborhood_crossjoin = df.crossJoin(neighborhood_df)
-        neighborhood_levy = neighborhood_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('neighborhood')))
-        neighborhood_count =  neighborhood_levy.filter(neighborhood_levy["word1_word2_levenshtein"] <= 2)
-        if len(neighborhood_count.take(1)) > 0:
-            neighborhood_frequency = neighborhood_count.groupBy().sum().collect()[0][0]
-            types['neighborhood'] = neighborhood_frequency
+    df = NAME(df)
 
-        ###############
-        # Borough
-        ###############
-        borough_columns = borough_df.columns
-        borough_crossjoin = df.crossJoin(borough_df)
-        borough_levy = borough_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('borough')))
-        borough_count =  borough_levy.filter(borough_levy["word1_word2_levenshtein"] <= 2)
-        if len(borough_count.take(1)) > 0:
-            borough_frequency = borough_count.groupBy().sum().collect()[0][0]
-            types['borough'] = borough_frequency
+    df = REGEX(df)
 
-        ###############
-        # School Name
-        ###############
-        schoolname_columns = schoolname_df.columns
-        schoolname_crossjoin = df.crossJoin(schoolname_df)
-        schoolname_levy = schoolname_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('schoolname')))
-        schoolname_count =  schoolname_levy.filter(schoolname_levy["word1_word2_levenshtein"] <= 2)
-        if len(schoolname_count.take(1)) > 0:
-            schoolname_frequency = schoolname_count.groupBy().sum().collect()[0][0]
-            types['schoolname'] = schoolname_frequency
+    df = LEVEN(df)
 
-        ###############
-        # Color
-        ###############
-        color_columns = color_df.columns
-        color_crossjoin = df.crossJoin(color_df)
-        color_levy = color_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('color')))
-        color_count =  color_levy.filter(color_levy["word1_word2_levenshtein"] <= 2)
-        if len(color_count.take(1)) > 0:
-            color_frequency = color_count.groupBy().sum().collect()[0][0]
-            types['color'] = color_frequency
-
-        ###############
-        # Carmake
-        ###############
-        carmake_columns = carmake_df.columns
-        carmake_crossjoin = df.crossJoin(carmake_df)
-        carmake_levy = carmake_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('carmake')))
-        carmake_count =  carmake_levy.filter(carmake_levy["word1_word2_levenshtein"] <= 2)
-        if len(carmake_count.take(1)) > 0:
-            carmake_frequency = carmake_count.groupBy().sum().collect()[0][0]
-            types['carmake'] = carmake_frequency
-
-
-        ###############
-        # City Agency
-        ###############
-        cityagency_columns = cityagency_df.columns
-        cityagency_crossjoin = df.crossJoin(cityagency_df)
-        cityagency_levy = cityagency_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('cityagency')))
-        cityagency_count =  cityagency_levy.filter(cityagency_levy["word1_word2_levenshtein"] <= 2)
-        if len(cityagency_count.take(1)) > 0:
-            cityagency_frequency = cityagency_count.groupBy().sum().collect()[0][0]
-            types['cityagency'] = cityagency_frequency
-
-        ##############
-        # Area of Study
-        ##############
-        areastudy_columns = areastudy_df.columns
-        areastudy_crossjoin = df.crossJoin(areastudy_df)
-        areastudy_levy = areastudy_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('areastudy')))
-        areastudy_count =  areastudy_levy.filter(areastudy_levy["word1_word2_levenshtein"] <= 2)
-        if len(areastudy_count.take(1)) > 0:
-            areastudy_frequency = areastudy_count.groupBy().sum().collect()[0][0]
-            types['areastudy'] = areastudy_frequency
-
-        ##############
-        # Subjects
-        ##############
-        subjects_columns = subjects_df.columns
-        subjects_crossjoin = df.crossJoin(subjects_df)
-        subjects_levy = subjects_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('subjects')))
-        subjects_count =  subjects_levy.filter(subjects_levy["word1_word2_levenshtein"] <= 2)
-        if len(subjects_count.take(1)) > 0:
-            subjects_frequency = subjects_count.groupBy().sum().collect()[0][0]
-            types['subjects'] = subjects_frequency
-
-        ##############
-        # School Levels
-        ##############
-        schoollevels_columns = schoollevels_df.columns
-        schoollevels_crossjoin = df.crossJoin(schoollevels_df)
-        schoollevels_levy = schoollevels_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('schoollevels')))
-        schoollevels_count =  schoollevels_levy.filter(schoollevels_levy["word1_word2_levenshtein"] <= 2)
-        if len(schoollevels_count.take(1)) > 0:
-            schoollevels_frequency = schoollevels_count.groupBy().sum().collect()[0][0]
-            types['schoollevels'] = schoollevels_frequency
-
-        ##############
-        # Colleges
-        ##############
-        colleges_columns = college_df.columns
-        college_crossjoin = df.crossJoin(college_df)
-        college_levy = college_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('college')))
-        college_counts = college_levy.filter(college_levy["word1_word2_levenshtein"] <= 2)
-        if len(college_counts.take(1)) > 0:
-            college_frequency = college_counts.groupBy().sum().collect()[0][0]
-            types['college'] = college_frequency
-
-        ##############
-        # Vehicle Type
-        ##############
-        vehicletype_columns = vehicletype_df.columns
-        vehicletype_crossjoin = df.crossJoin(vehicletype_df)
-        vehicletype_levy = vehicletype_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('vehicletype')))
-        vehicletype_counts = vehicletype_levy.filter(vehicletype_levy["word1_word2_levenshtein"] <= 2)
-        if len(vehicletype_counts.take(1)) > 0:
-            vehicletype_frequency = vehicletype_counts.groupBy().sum().collect()[0][0]
-            types['vehicletype'] = vehicletype_frequency
-
-        ##############
-        # Type of Location
-        ##############
-        typelocation_columns = typelocation_df.columns
-        typelocation_crossjoin = df.crossJoin(typelocation_df)
-        typelocation_levy = typelocation_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('typelocation')))
-        typelocation_counts = typelocation_levy.filter(typelocation_levy["word1_word2_levenshtein"] <= 2)
-        if len(typelocation_counts.take(1)) > 0:
-            typelocation_frequency = typelocation_counts.groupBy().sum().collect()[0][0]
-            types['typelocation'] = typelocation_frequency
-
-        ##############
-        # Parks
-        ##############
-        parks_columns = parks_df.columns
-        parks_crossjoin = df.crossJoin(parks_df)
-        parks_levy = parks_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('parks')))
-        park_counts = parks_levy.filter(parks_levy['word1_word2_levenshtein'] <= 2)
-        if len(park_counts.take(1)) > 0:
-            #will this indexing cause issues if first column is integer schema?
-            parks_frequency = park_counts.groupBy().sum().collect()[0][0]
-            types['parks'] = parks_frequency
-
-	################
-	# Building Codes
-	################
-        building_columns = building_code_df.columns
-        building_crossjoin = df.crossJoin(building_code_df)
-        building_code_levy = building_crossjoin.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col('building_codes')))
-        building_counts = building_code_levy.filter(building_code_levy['word1_word2_levenshtein'] = 0)
-        if len(building_counts.take(1)) > 0:
-            building_code_frequency = building_counts.groupBy().sum().collect()[0][0]
-            types['building_code'] = building_code_frequency
-        return types
-
-    types_names = {}
-    types_regex = {}
-    types_leven = {}
-
-    #check levenshtein distance with NAME
-    if fuzz.partial_ratio(colName.lower(), 'name') > 0.75 or fuzz.partial_ratio(colName.lower(), 'street') > 0.75:
-        types_names = NAME(df)
-
-    types_regex = REGEX(df)
-
-    types_leven = LEVEN(df)
-
-    #merge all three dictionaries
-
-    types = {**types_names, **types_regex, **types_leven}
-
-    return types
+    return df
 
 #################################
 # Train Classifier
@@ -691,6 +518,12 @@ for file in files_and_length:
     df = df.toDF(*colNamesList) #change name in DF
     #colName = colNamesList[0] #change colName we have
     colName = colName.replace(".","").replace(" ", "_")
+
+    ###
+    # Add third column to df with null types, will amend as we go along.
+    ##
+    df = df.withColumn('true_type', lit(None))
+
     types = semanticType(colName, df)
     print("Working on", colName)
     print("This is column number", files.index(file))
