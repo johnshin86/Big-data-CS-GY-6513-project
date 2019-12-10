@@ -443,13 +443,14 @@ for file in files_and_length[:10]:
 
     df_columns = df.columns    
 
-    dictionary_df = df.groupBy("true_type").collect()
+    dictionary_df = df.groupBy("true_type").select(df_columns[1], df_columns[2]).collect()
+    print(dictionary_df)
 
-    print("Working on", colName)
-    print("This is column number", files.index(file))
+    #print("Working on", colName)
+    #print("This is column number", files.index(file))
     #process dictionary to record to json
-    with open(str(file) +'.json', 'w') as fp:
-        json.dump(types, fp)
+    #with open(str(file) +'.json', 'w') as fp:
+    #    json.dump(types, fp)
 
 
 #largest file index is 132
