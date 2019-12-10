@@ -88,24 +88,26 @@ def NAME(df):
     #take column one and make predictions
     df = df.select(col(columns[0]).alias("TEXT"), col(columns[1]).alias("frequency"), col("true_type"))
     pred = model.transform(df.select('TEXT'))
-    pred_categories = pred.select('TEXT', 'originalcategory', 'probability') # add probability vector
+    pred_categories = pred.select('TEXT', 'originalcategory', 'probability')
     new_df = df.join(pred_categories, on=['TEXT'], how='left_outer')
     # create new DF, filter only for high probability.
     new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
     #new_df.select("probability").map(lambda x: x.toArray().max())
-    new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.95,
+    new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.80,
     new_df["originalcategory"]).otherwise(new_df["true_type"]))
     df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return df
 
-def leven_helper(df, ref_df, cut_off):
+def leven_helper(df, ref_df, cut_off, type_str):
     df_columns = df.columns
     # grab the non typed entries in the input df
     new_df = df.filter(df["true_type"].isNull())
-
+    #crossjoin null values with reference columns
     ref_columns = ref_df.columns
     crossjoin_df = new_df.crossJoin(ref_df)
+    #compute levy distance
     levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col(ref_columns[0])))
+    #collect rows that were less than cutoff
     count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= cut_off)
 
     count_columns = count_df.columns
@@ -113,27 +115,27 @@ def leven_helper(df, ref_df, cut_off):
     count_columns = count_df.columns
 
     df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'left') #join with low lev distance rows
-    df = df.withColumn("true_type", when(df["type_field"].isNotNull(), "CITY").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df["type_field"].isNotNull(), type_str).otherwise(df["true_type"]))
     df = df.drop("text_field").drop("freq_field").drop("type_field")
     return df
 
 def LEVEN(df):
     print("Computing Levenshtein for:", colName)
-    df = leven_helper(df, cities_df, 2)
-    df = leven_helper(df, neighborhood_df, 2)
-    df = leven_helper(df, borough_df, 2)
-    df = leven_helper(df, schoolname_df, 2)
-    df = leven_helper(df, color_df, 2)
-    df = leven_helper(df, carmake_df, 2)
-    df = leven_helper(df, cityagency_df, 2)
-    df = leven_helper(df, areastudy_df, 2)
-    df = leven_helper(df, subjects_df, 2)
-    df = leven_helper(df, schoollevels_df, 1)
-    df = leven_helper(df, college_df, 2)
-    df = leven_helper(df, vehicletype_df, 2)
-    df = leven_helper(df, typelocation_df, 1)
-    df = leven_helper(df, parks_df, 1)
-    df = leven_helper(df, building_code_df, 1)
+    df = leven_helper(df, cities_df, 2, "CITIES")
+    df = leven_helper(df, neighborhood_df, 2, "NEIGHBORHOOD")
+    df = leven_helper(df, borough_df, 2, "BOROUGH")
+    df = leven_helper(df, schoolname_df, 2, "SCHOOLNAME")
+    df = leven_helper(df, color_df, 2, "COLOR")
+    df = leven_helper(df, carmake_df, 2, "CARMAKE")
+    df = leven_helper(df, cityagency_df, 2, "CITYAGENCY")
+    df = leven_helper(df, areastudy_df, 2, "AREASTUDY")
+    df = leven_helper(df, subjects_df, 2, "SUBJECTS")
+    df = leven_helper(df, schoollevels_df, 1, "SCHOOLLEVELS")
+    df = leven_helper(df, college_df, 2, "COLLEGE")
+    df = leven_helper(df, vehicletype_df, 2, "VEHICLE TYPE")
+    df = leven_helper(df, typelocation_df, 1, "TYPELOCATION")
+    df = leven_helper(df, parks_df, 1, "PARKS")
+    df = leven_helper(df, building_code_df, 1, "BUILDINGCODES")
     return df
 
 
@@ -443,8 +445,7 @@ for file in files_and_length[:10]:
 
     df_columns = df.columns
 
-    dictionary_df = df.groupBy("true_type").collect()
-    print(dictionary_df)
+    dictionary_df = df.groupBy("true_type").sum().collect()
 
     #print("Working on", colName)
     #print("This is column number", files.index(file))
