@@ -91,7 +91,7 @@ def NAME(df):
     # create new DF, filter only for high probability.
     new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
     #new_df.select("probability").map(lambda x: x.toArray().max())
-    new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.80) & \
+    new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.90) & \
             (new_df["true_type"].isNull()), new_df["originalcategory"]).otherwise(new_df["true_type"]))
     rdf = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return rdf
@@ -494,13 +494,16 @@ for file in files_and_length[index:index+1]:
     df = df.withColumn('true_type', lit(None))
     df = semanticType(colName, df)
     df_columns = df.columns
-    dictionary_df = df.groupBy("true_type").sum().collect()
-
+    list_row_type = df.groupBy("true_type").sum().collect()
+    list_row_type = [[i[0],i[1]] for i in list_row_type]
+    predicted_types = {"predicted_types": [x[0] for x in list_row_type]}
+    this_column = {"column_name": colName, "semantic_types": [{"semantic_type": x[0], "label": "string", "count": x[1]} for x in list_row_type]}
+    master_list = [predicted_types, this_column]
     #print("Working on", colName)
     #print("This is column number", files.index(file))
     #process dictionary to record to json
-    #with open(str(file) +'.json', 'w') as fp:
-    #    json.dump(types, fp)
+    with open(str(file) +'.json', 'w') as fp:
+        json.dump(master_list, fp)
 
 
 #largest file index is 132
