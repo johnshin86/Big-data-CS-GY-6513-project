@@ -52,7 +52,7 @@ with open("/home/jys308/cluster1.txt","r") as f:
     content = f.readlines()
 
 def max_vector(vector):
-    max_val = float(max(vector))                 
+    max_val = float(max(vector))
     return max_val
 
 max_vector_udf = udf(max_vector, FloatType())
@@ -72,7 +72,7 @@ def REGEX(df):
 
     #could improve the address regex
     address_regex = r'^\d+\s[A-z]+\s[A-z]+'
-    
+
     columns = df.columns
 
     df = df.withColumn("true_type", when(df[columns[0]].rlike(web_regex), "WEBSITE").otherwise(df["true_type"]))
@@ -93,7 +93,7 @@ def NAME(df):
     # create new DF, filter only for high probability.
     new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
     #new_df.select("probability").map(lambda x: x.toArray().max())
-    new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.95,     
+    new_df = new_df.withColumn("true_type", when(new_df["max_probability"] >= 0.95,
     new_df["originalcategory"]).otherwise(new_df["true_type"]))
     df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return df
@@ -102,25 +102,25 @@ def leven_helper(df, ref_df):
     df_columns = df.columns
     # grab the non typed entries in the input df
     new_df = df.filter(df["true_type"].isNull())
-    
+
     ref_columns = ref_df.columns
     crossjoin_df = new_df.crossJoin(ref_df)
     levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col(ref_columns[0])))
     count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= 2)
 
     count_columns = count_df.columns
-    count_df = count_df.select(col(count_columns[0]).alias("text_field"), col(count_columns[1]).alias("freq_field"), col(count_columns[2]))
+    count_df = count_df.select(col(count_columns[0]).alias("text_field"), col(count_columns[1]).alias("freq_field"), col(count_columns[2]).alias("type_field"))
     count_columns = count_df.columns
 
     df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'left') #join with low lev distance rows
-    df = df.withColumn("true_type", when(df["word1_word2_levenshtein"].isNotNull(), "CITY").otherwise(df["true_type"]))
-    df = df.drop("text_field").drop("freq_field").drop("word1_word2_levenshtein")
+    df = df.withColumn("true_type", when(df["type_field"].isNotNull(), "CITY").otherwise(df["true_type"]))
+    df = df.drop("text_field").drop("freq_field").drop("type_field")
     return df
 
 def LEVEN(df):
     print("Computing Levenshtein for:", colName)
     df = leven_helper(df, cities_df)
-    df = leven_helper(df, neighborhood_df)     
+    df = leven_helper(df, neighborhood_df)
     df = leven_helper(df, borough_df)
     df = leven_helper(df, schoolname_df)
     df = leven_helper(df, color_df)
@@ -441,7 +441,7 @@ for file in files_and_length[:10]:
 
     df = semanticType(colName, df)
 
-    df_columns = df.columns    
+    df_columns = df.columns
 
     dictionary_df = df.groupBy("true_type").select(df_columns[1], df_columns[2]).collect()
     print(dictionary_df)
