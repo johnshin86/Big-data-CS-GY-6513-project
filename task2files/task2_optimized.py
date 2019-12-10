@@ -73,11 +73,11 @@ def REGEX(df):
     print("computing Regex for:", colName)
     #could improve the address regex
     columns = df.columns
-    df = df.withColumn("true_type", when(df[columns[0]].rlike(web_regex), "WEBSITE").otherwise(df["true_type"]))
-    df = df.withColumn("true_type", when(df[columns[0]].rlike(zip_regex), "ZIPCODE").otherwise(df["true_type"]))
-    df = df.withColumn("true_type", when(df[columns[0]].rlike(latlong_regex), "LATLONG").otherwise(df["true_type"]))
-    df = df.withColumn("true_type", when(df[columns[0]].rlike(phone_regex), "PHONENUMBER").otherwise(df["true_type"]))
-    df = df.withColumn("true_type", when(df[columns[0]].rlike(address_regex), "ADDRESS").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(web_regex), "website").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(zip_regex), "zip_code").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(latlong_regex), "lat_lon_cord").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(phone_regex), "phone_number").otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(df[columns[0]].rlike(address_regex), "address").otherwise(df["true_type"]))
     return df
 
 def NAME(df):
@@ -92,9 +92,11 @@ def NAME(df):
     new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
     #new_df.select("probability").map(lambda x: x.toArray().max())
     new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.80) & \
-            (new_df["true_type"].isNotNull()), new_df["originalcategory"]).otherwise(new_df["true_type"]))
+            (new_df["true_type"].isNull()), new_df["originalcategory"]).otherwise(new_df["true_type"]))
     df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return df
+
+"""
 
 def leven_helper(df, ref_df, cut_off, type_str):
     print("size of reference_df",ref_df.count())
@@ -125,26 +127,59 @@ def leven_helper(df, ref_df, cut_off, type_str):
     levy_df.unpersist()
     count_df.unpersist()
     df.show()
-    #print("size of df",df.count())
+    return df
+"""
+def leven_helper(df, ref_df, cut_off, type_str):
+    print("size of reference_df",ref_df.count())
+    df_columns = df.columns
+    # grab the non typed entries in the input df
+    new_df = df.filter(df["true_type"].isNull())
+    #crossjoin null values with reference columns
+    ref_columns = ref_df.columns
+    levy_df = new_df.crossJoin(ref_df)
+    #compute levy distance
+    levy_df = levy_df.withColumn("word1_word2_levenshtein",\
+        levenshtein(lower(col(df_columns[0])), lower(col(ref_columns[0]))))
+    #collect rows that were less than cutoff
+    levy_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= cut_off)
+    levy_columns = levy_df.columns
+    levy_df = levy_df.groupBy(levy_columns[0]).min("word1_word2_levenshtein")
+    levy_columns = levy_df.columns
+    levy_df = levy_df.select(col(levy_columns[0]).alias("text_field"), \
+        col(levy_columns[1]).alias("min"))
+    levy_columns = levy_df.columns
+    
+    df.filter()
+
+    #df = df.join(levy_df, df[df_columns[0]] == levy_df[levy_columns[0]], 'leftouter')
+    #df = df.withColumn("true_type", when(df["min"]\
+    #        .isNotNull(), type_str).otherwise(df["true_type"]))
+    #df = df.drop("text_field").drop("min")
+    #
+    new_df.unpersist()
+    #crossjoin_df.unpersist()
+    levy_df.unpersist()
+    #count_df.unpersist()
+    df.show()
     return df
 
 def LEVEN(df):
     print("Computing Levenshtein for:", colName)
-    df = leven_helper(df, cities_df, 2, "CITIES")
-    df = leven_helper(df, neighborhood_df, 2, "NEIGHBORHOOD")
-    df = leven_helper(df, borough_df, 2, "BOROUGH")
-    df = leven_helper(df, schoolname_df, 2, "SCHOOLNAME")
-    df = leven_helper(df, color_df, 2, "COLOR")
-    df = leven_helper(df, carmake_df, 2, "CARMAKE")
-    df = leven_helper(df, cityagency_df, 2, "CITYAGENCY")
-    df = leven_helper(df, areastudy_df, 2, "AREASTUDY")
-    df = leven_helper(df, subjects_df, 2, "SUBJECTS")
-    df = leven_helper(df, schoollevels_df, 1, "SCHOOLLEVELS")
-    df = leven_helper(df, college_df, 2, "COLLEGE")
-    df = leven_helper(df, vehicletype_df, 2, "VEHICLE TYPE")
-    df = leven_helper(df, typelocation_df, 1, "TYPELOCATION")
-    df = leven_helper(df, parks_df, 1, "PARKS")
-    df = leven_helper(df, building_code_df, 1, "BUILDINGCODES")
+    df = leven_helper(df, cities_df, 2, "city")
+    df = leven_helper(df, neighborhood_df, 2, "neighborhood")
+    df = leven_helper(df, borough_df, 2, "borough")
+    df = leven_helper(df, schoolname_df, 2, "school_name")
+    df = leven_helper(df, color_df, 2, "color")
+    df = leven_helper(df, carmake_df, 2, "car_make")
+    df = leven_helper(df, cityagency_df, 2, "city_agency")
+    df = leven_helper(df, areastudy_df, 2, "area_of_study")
+    df = leven_helper(df, subjects_df, 2, "subject_in_school")
+    df = leven_helper(df, schoollevels_df, 1, "school_level")
+    df = leven_helper(df, college_df, 2, "college_name")
+    df = leven_helper(df, vehicletype_df, 3, "vehicle_type")
+    df = leven_helper(df, typelocation_df, 5, "location_type")
+    df = leven_helper(df, parks_df, 5, "park_playground")
+    df = leven_helper(df, building_code_df, 0, "building_classification")
     return df
 
 
@@ -179,11 +214,11 @@ else:
     last_name = spark.sql("SELECT `Applicant Last Name` as TEXT from permit_df")
     business_name = spark.sql("SELECT DISTINCT `Applicant Business Name` as TEXT FROM permit_df")
 
-    st_name = st_name.withColumn('category', lit('STREETNAME'))
-    full_st_name = full_st_name.withColumn('category', lit('STREETNAME'))
-    first_name = first_name.withColumn('category', lit('HUMANNAME'))
-    last_name = last_name.withColumn('category', lit('HUMANNAME'))
-    business_name = business_name.withColumn('category', lit('BUSINESSNAME'))
+    st_name = st_name.withColumn('category', lit('street_name'))
+    full_st_name = full_st_name.withColumn('category', lit('street_name'))
+    first_name = first_name.withColumn('category', lit('person_name'))
+    last_name = last_name.withColumn('category', lit('person_name'))
+    business_name = business_name.withColumn('category', lit('business_name'))
 
     train1 = business_name.union(st_name)
     train2 = first_name.union(last_name)
@@ -207,7 +242,7 @@ else:
     model = pipeline.fit(fullData)
 
     print("Done training classifier")
-
+    #model.save("weights")
     model.save("/home/jys308/weights")
 
     #pred = model.transform(testData)
