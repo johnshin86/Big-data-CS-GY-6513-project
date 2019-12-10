@@ -131,7 +131,7 @@ def LEVEN(df):
     df = leven_helper(df, schoollevels_df, 1)
     df = leven_helper(df, college_df, 2)
     df = leven_helper(df, vehicletype_df, 2)
-    df = leven_helper(df, typelocation_df)
+    df = leven_helper(df, typelocation_df, 1)
     df = leven_helper(df, parks_df, 1)
     df = leven_helper(df, building_code_df, 1)
     return df
