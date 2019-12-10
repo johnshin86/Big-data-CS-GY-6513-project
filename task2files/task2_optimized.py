@@ -98,7 +98,7 @@ def NAME(df):
     df = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return df
 
-def leven_helper(df, ref_df):
+def leven_helper(df, ref_df, cut_off):
     df_columns = df.columns
     # grab the non typed entries in the input df
     new_df = df.filter(df["true_type"].isNull())
@@ -106,7 +106,7 @@ def leven_helper(df, ref_df):
     ref_columns = ref_df.columns
     crossjoin_df = new_df.crossJoin(ref_df)
     levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",levenshtein(col(df_columns[0]), col(ref_columns[0])))
-    count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= 2)
+    count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= cut_off)
 
     count_columns = count_df.columns
     count_df = count_df.select(col(count_columns[0]).alias("text_field"), col(count_columns[1]).alias("freq_field"), col(count_columns[2]).alias("type_field"))
@@ -119,21 +119,21 @@ def leven_helper(df, ref_df):
 
 def LEVEN(df):
     print("Computing Levenshtein for:", colName)
-    df = leven_helper(df, cities_df)
-    df = leven_helper(df, neighborhood_df)
-    df = leven_helper(df, borough_df)
-    df = leven_helper(df, schoolname_df)
-    df = leven_helper(df, color_df)
-    df = leven_helper(df, carmake_df)
-    df = leven_helper(df, cityagency_df)
-    df = leven_helper(df, areastudy_df)
-    df = leven_helper(df, subjects_df)
-    df = leven_helper(df, schoollevels_df)
-    df = leven_helper(df, college_df)
-    df = leven_helper(df, vehicletype_df)
+    df = leven_helper(df, cities_df, 2)
+    df = leven_helper(df, neighborhood_df, 2)
+    df = leven_helper(df, borough_df, 2)
+    df = leven_helper(df, schoolname_df, 2)
+    df = leven_helper(df, color_df, 2)
+    df = leven_helper(df, carmake_df, 2)
+    df = leven_helper(df, cityagency_df, 2)
+    df = leven_helper(df, areastudy_df, 2)
+    df = leven_helper(df, subjects_df, 2)
+    df = leven_helper(df, schoollevels_df, 1)
+    df = leven_helper(df, college_df, 2)
+    df = leven_helper(df, vehicletype_df, 2)
     df = leven_helper(df, typelocation_df)
-    df = leven_helper(df, parks_df)
-    df = leven_helper(df, building_code_df)
+    df = leven_helper(df, parks_df, 1)
+    df = leven_helper(df, building_code_df, 1)
     return df
 
 
@@ -443,7 +443,7 @@ for file in files_and_length[:10]:
 
     df_columns = df.columns
 
-    dictionary_df = df.groupBy("true_type").select(df_columns[1], df_columns[2]).collect()
+    dictionary_df = df.groupBy("true_type").collect()
     print(dictionary_df)
 
     #print("Working on", colName)
