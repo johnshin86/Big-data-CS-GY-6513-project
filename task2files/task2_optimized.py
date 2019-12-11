@@ -96,43 +96,6 @@ def NAME(df):
     rdf = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return rdf
 
-
-"""
-def leven_helper(df, ref_df, cut_off, type_str):
-    #print("size of reference_df",ref_df.count())
-    df_columns = df.columns
-    # grab the non typed entries in the input df
-    new_df = df.filter(df["true_type"].isNull())
-    #crossjoin null values with reference columns
-    ref_columns = ref_df.columns
-    crossjoin_df = new_df.crossJoin(ref_df)
-    #compute levy distance
-    levy_df = crossjoin_df.withColumn("word1_word2_levenshtein",\
-        levenshtein(lower(col(df_columns[0])), lower(col(ref_columns[0]))))
-    #collect rows that were less than cutoff
-    count_df =  levy_df.filter(levy_df["word1_word2_levenshtein"] <= cut_off)
-    count_columns = count_df.columns
-    count_df = count_df.groupBy(count_columns[0]).min("word1_word2_levenshtein")
-    count_columns = count_df.columns
-    count_df = count_df.select(col(count_columns[0]).alias("text_field"), \
-        col(count_columns[1]).alias("min"))
-    count_columns = count_df.columns
-    #df = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
-    #df = df.withColumn("true_type", when(df["min"]\
-    #        .isNotNull(), type_str).otherwise(df["true_type"]))
-    #df = df.drop("text_field").drop("min")
-    rdf = df.join(count_df, df[df_columns[0]] == count_df[count_columns[0]], 'leftouter')
-    rdf = rdf.withColumn("true_type", when(rdf["min"]\
-            .isNotNull(), type_str).otherwise(rdf["true_type"]))
-    rdf = rdf.drop("text_field").drop("min")
-    #new_df.unpersist()
-    #crossjoin_df.unpersist()
-    #levy_df.unpersist()
-    #count_df.unpersist()
-    #df.show()
-    return rdf
-"""
-
 def leven_helper(df, ref_df, cut_off, type_str):
     #print("size of reference_df",ref_df.count())
     df_columns = df.columns
@@ -157,15 +120,6 @@ def leven_helper(df, ref_df, cut_off, type_str):
     levy_df = levy_df.collect()
     levy_df = [x[0] for x in levy_df]
     rdf = df.withColumn("true_type", when(df[df_columns[0]].isin(levy_df), "neighborhood").otherwise(df["true_type"]))
-    #df = df.join(levy_df, df[df_columns[0]] == levy_df[levy_columns[0]], 'leftouter')
-    #df = df.withColumn("true_type", when(df["min"]\
-    #        .isNotNull(), type_str).otherwise(df["true_type"]))
-    #df = df.drop("text_field").drop("min")
-    #new_df.unpersist()
-    #crossjoin_df.unpersist()
-    #levy_df.unpersist()
-    #count_df.unpersist()
-    #df.show()
     return rdf
 
 
@@ -507,19 +461,3 @@ for file in files_and_length:
 
 
 #largest file index is 132
-
-
-"""
-
-files = files[:1]
-for file in files:
-    fileData = file.split(".")
-    fileName = fileData[0]
-    colName = fileData[1]
-    df = spark.read.option("delimiter", "\\t").option("header","true").option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-    print("Working on", colName)
-    print("This is column number", files.index(file))
-    types = semanticType(colName, df)
-    with open('semantic_file_test.txt', 'w') as file:
-        file.write(json.dumps(types))
-"""
