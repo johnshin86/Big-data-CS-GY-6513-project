@@ -91,7 +91,7 @@ def NAME(df):
     # create new DF, filter only for high probability.
     new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
     #new_df.select("probability").map(lambda x: x.toArray().max())
-    new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.90) & \
+    new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.95) & \
             (new_df["true_type"].isNull()), new_df["originalcategory"]).otherwise(new_df["true_type"]))
     rdf = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return rdf
@@ -119,21 +119,21 @@ def leven_helper(df, ref_df, cut_off, type_str):
     df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), "neighborhood").otherwise(df["true_type"]))
     levy_df = levy_df.collect()
     levy_df = [x[0] for x in levy_df]
-    rdf = df.withColumn("true_type", when(df[df_columns[0]].isin(levy_df), "neighborhood").otherwise(df["true_type"]))
+    rdf = df.withColumn("true_type", when(df[df_columns[0]].isin(levy_df), type_str).otherwise(df["true_type"]))
     return rdf
 
 
 def LEVEN(df):
     print("Computing Levenshtein for:", colName)
-    df1 = leven_helper(df, cities_df, 3, "city")
+    df1 = leven_helper(df, cities_df, 5, "city")
     df2 = leven_helper(df1, neighborhood_df, 4, "neighborhood")
-    df3 = leven_helper(df2, borough_df, 0, "borough")
+    df3 = leven_helper(df2, borough_df, 1, "borough")
     df4 = leven_helper(df3, schoolname_df, 5, "school_name")
-    df5 = leven_helper(df4, color_df, 2, "color")
-    df6 = leven_helper(df5, carmake_df, 2, "car_make")
+    df5 = leven_helper(df4, color_df, 3, "color")
+    df6 = leven_helper(df5, carmake_df, 3, "car_make")
     df7 = leven_helper(df6, cityagency_df, 3, "city_agency")
-    df8 = leven_helper(df7, areastudy_df, 5, "area_of_study")
-    df9 = leven_helper(df8, subjects_df, 2, "subject_in_school")
+    df8 = leven_helper(df7, areastudy_df, 3, "area_of_study")
+    df9 = leven_helper(df8, subjects_df, 3, "subject_in_school")
     df10 = leven_helper(df9, schoollevels_df, 1, "school_level")
     df11 = leven_helper(df10, college_df, 3, "college_name")
     df12 = leven_helper(df11, vehicletype_df, 3, "vehicle_type")
@@ -434,30 +434,33 @@ files_and_length.sort(key = lambda x: x[1])
 #index = 55
 
 for file in files_and_length:
-    print("This is the index of sorted list", files_and_length.index(file))
-    file = file[0]
-    fileData = file.split(".")
-    fileName = fileData[0]
-    colName = fileData[1]
-    df = spark.read.option("delimiter", "\\t").option("header","true") \
-        .option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
-    colNamesList = [i.replace(".","").replace(" ","_") for i in df.columns]
-    df = df.toDF(*colNamesList) #change name in DF
-    #colName = colNamesList[0] #change colName we have
-    colName = colName.replace(".","").replace(" ", "_")
-    df = df.withColumn('true_type', lit(None))
-    df = semanticType(colName, df)
-    df_columns = df.columns
-    list_row_type = df.groupBy("true_type").sum().collect()
-    list_row_type = [[i[0],i[1]] for i in list_row_type]
-    predicted_types = {"predicted_types": [x[0] for x in list_row_type]}
-    this_column = {"column_name": colName, "semantic_types": [{"semantic_type": x[0], "label": "string", "count": x[1]} for x in list_row_type]}
-    master_list = [predicted_types, this_column]
-    #print("Working on", colName)
-    #print("This is column number", files.index(file))
-    #process dictionary to record to json
-    with open(str(file) +'.json', 'w') as fp:
-        json.dump(master_list, fp)
+    if files_and_length.index(file) == 143:
+        pass
+    else:
+        print("This is the index of sorted list", files_and_length.index(file))
+        file = file[0]
+        fileData = file.split(".")
+        fileName = fileData[0]
+        colName = fileData[1]
+        df = spark.read.option("delimiter", "\\t").option("header","true") \
+            .option("inferSchema","true").csv("/user/hm74/NYCColumns/" + file)
+        colNamesList = [i.replace(".","").replace(" ","_") for i in df.columns]
+        df = df.toDF(*colNamesList) #change name in DF
+        #colName = colNamesList[0] #change colName we have
+        colName = colName.replace(".","").replace(" ", "_")
+        df = df.withColumn('true_type', lit(None))
+        df = semanticType(colName, df)
+        df_columns = df.columns
+        list_row_type = df.groupBy("true_type").sum().collect()
+        list_row_type = [[i[0],i[1]] for i in list_row_type]
+        predicted_types = {"predicted_types": [x[0] for x in list_row_type]}
+        this_column = {"column_name": colName, "semantic_types": [{"semantic_type": x[0], "label": "string", "count": x[1]} for x in list_row_type]}
+        master_list = [predicted_types, this_column]
+        #print("Working on", colName)
+        #print("This is column number", files.index(file))
+        #process dictionary to record to json
+        with open(str(file) +'.json', 'w') as fp:
+            json.dump(master_list, fp)
 
 
 #largest file index is 132
