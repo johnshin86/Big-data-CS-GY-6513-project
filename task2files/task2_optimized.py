@@ -116,7 +116,7 @@ def leven_helper(df, ref_df, cut_off, type_str):
         col(levy_columns[1]).alias("min"))
     levy_columns = levy_df.columns
     levy_df = levy_df.drop("min")
-    df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), "neighborhood").otherwise(df["true_type"]))
+    df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), type_str).otherwise(df["true_type"]))
     levy_df = levy_df.collect()
     levy_df = [x[0] for x in levy_df]
     rdf = df.withColumn("true_type", when(df[df_columns[0]].isin(levy_df), type_str).otherwise(df["true_type"]))
