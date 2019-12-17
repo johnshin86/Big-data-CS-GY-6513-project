@@ -91,7 +91,7 @@ def NAME(df):
     # create new DF, filter only for high probability.
     new_df = new_df.withColumn("max_probability", max_vector_udf(new_df["probability"]))
     #new_df.select("probability").map(lambda x: x.toArray().max())
-    new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.95) & \
+    new_df = new_df.withColumn("true_type", when( (new_df["max_probability"] >= 0.98) & \
             (new_df["true_type"].isNull()), new_df["originalcategory"]).otherwise(new_df["true_type"]))
     rdf = new_df.drop("originalcategory").drop("probability").drop("max_probability")
     return rdf
@@ -116,7 +116,7 @@ def leven_helper(df, ref_df, cut_off, type_str):
         col(levy_columns[1]).alias("min"))
     levy_columns = levy_df.columns
     levy_df = levy_df.drop("min")
-    df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), type_str).otherwise(df["true_type"]))
+    df = df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), type_str).otherwise(df["true_type"]))
     levy_df = levy_df.collect()
     levy_df = [x[0] for x in levy_df]
     rdf = df.withColumn("true_type", when(df[df_columns[0]].isin(levy_df), type_str).otherwise(df["true_type"]))
