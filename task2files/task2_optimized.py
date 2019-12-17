@@ -116,7 +116,7 @@ def leven_helper(df, ref_df, cut_off, type_str):
         col(levy_columns[1]).alias("min"))
     levy_columns = levy_df.columns
     levy_df = levy_df.drop("min")
-    df = df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), type_str).otherwise(df["true_type"]))
+    #df = df.withColumn("true_type", when(col(df_columns[0]).isin(levy_df[levy_columns[0]]), type_str).otherwise(df["true_type"]))
     levy_df = levy_df.collect()
     levy_df = [x[0] for x in levy_df]
     rdf = df.withColumn("true_type", when(df[df_columns[0]].isin(levy_df), type_str).otherwise(df["true_type"]))
@@ -125,22 +125,22 @@ def leven_helper(df, ref_df, cut_off, type_str):
 
 def LEVEN(df):
     print("Computing Levenshtein for:", colName)
-    df1 = leven_helper(df, cities_df, 5, "city")
-    df2 = leven_helper(df1, neighborhood_df, 4, "neighborhood")
-    df3 = leven_helper(df2, borough_df, 1, "borough")
-    df4 = leven_helper(df3, schoolname_df, 5, "school_name")
-    df5 = leven_helper(df4, color_df, 3, "color")
-    df6 = leven_helper(df5, carmake_df, 3, "car_make")
-    df7 = leven_helper(df6, cityagency_df, 3, "city_agency")
-    df8 = leven_helper(df7, areastudy_df, 3, "area_of_study")
-    df9 = leven_helper(df8, subjects_df, 3, "subject_in_school")
-    df10 = leven_helper(df9, schoollevels_df, 1, "school_level")
-    df11 = leven_helper(df10, college_df, 3, "college_name")
-    df12 = leven_helper(df11, vehicletype_df, 3, "vehicle_type")
-    df13 = leven_helper(df12, typelocation_df, 5, "location_type")
-    df14 = leven_helper(df13, parks_df, 5, "park_playground")
-    df15 = leven_helper(df14, building_code_df, 0, "building_classification")
-    return df15
+    df = leven_helper(df, cities_df, 5, "city")
+    df = leven_helper(df, neighborhood_df, 4, "neighborhood")
+    df = leven_helper(df, borough_df, 1, "borough")
+    df = leven_helper(df, schoolname_df, 5, "school_name")
+    df = leven_helper(df, color_df, 3, "color")
+    df = leven_helper(df, carmake_df, 3, "car_make")
+    df = leven_helper(df, cityagency_df, 3, "city_agency")
+    df = leven_helper(df, areastudy_df, 3, "area_of_study")
+    df = leven_helper(df, subjects_df, 3, "subject_in_school")
+    df = leven_helper(df, schoollevels_df, 1, "school_level")
+    df = leven_helper(df, college_df, 3, "college_name")
+    df = leven_helper(df, vehicletype_df, 3, "vehicle_type")
+    df = leven_helper(df, typelocation_df, 5, "location_type")
+    df = leven_helper(df, parks_df, 5, "park_playground")
+    df = leven_helper(df, building_code_df, 0, "building_classification")
+    return df
 
 
 def semanticType(colName, df):
