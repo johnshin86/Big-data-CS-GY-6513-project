@@ -1,1 +1,1 @@
-Project for the Big Data course at NYU, where we worked on ETL of the OpenNYC dataset. My primary contribution is in the task 2 folder, where I worked on detecting semantic types through a combination of regular expressions, string metrics, and machine learning.
+This was a project for the Big Data course at NYU, where we worked on ETL of the OpenNYC dataset. My primary contribution is in the task 2 folder, where I worked on detecting semantic types through a combination of regular expressions, string metrics, and machine learning.
